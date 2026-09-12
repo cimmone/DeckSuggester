@@ -47,16 +47,17 @@ RUN gradle downloadDependencies --console=plain --no-daemon
 # build time, so the finished image already contains a populated database and
 # no download/import is needed on every container start.
 #
-# The file below is copied from a local download instead of being fetched
-# from Scryfall on every build - Scryfall rate-limits frequent bulk data
-# requests, which becomes a problem while iterating on the Dockerfile. Once
-# the data pipeline is stable, switch to downloading a fresh export instead:
-# swap the COPY line below for these two lines (the URL's timestamp changes
-# on every Scryfall export, so it needs updating too):
+# This downloads a fresh export from Scryfall on every build. The URL's
+# timestamp changes on every Scryfall export, so it needs updating whenever
+# a new export is published (check https://scryfall.com/docs/api/bulk-data).
+# Scryfall rate-limits frequent bulk data requests, which becomes a problem
+# while iterating on the Dockerfile - while doing that, comment out the ARG
+# and RUN lines below and uncomment this COPY of a local download instead:
 #
-# ARG SCRYFALL_ALL_CARDS_URL=https://data.scryfall.io/all-cards/all-cards-20260912091715.jsonl.gz
-# RUN curl -fsSL "${SCRYFALL_ALL_CARDS_URL}" -o /app/data/all-cards.jsonl.gz
-COPY all-cards.jsonl.gz /app/data/all-cards.jsonl.gz
+# COPY all-cards.jsonl.gz /app/data/all-cards.jsonl.gz
+ARG SCRYFALL_ALL_CARDS_URL=https://data.scryfall.io/all-cards/all-cards-20260912091715.jsonl.gz
+RUN mkdir -p /app/data \
+    && curl -fsSL "${SCRYFALL_ALL_CARDS_URL}" -o /app/data/all-cards.jsonl.gz
 
 RUN mkdir -p /data/db \
     && mongod --dbpath /data/db --bind_ip 127.0.0.1 --fork --logpath /var/log/mongod-import.log \
