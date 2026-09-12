@@ -4,14 +4,17 @@ FROM ubuntu:26.04
 
 ARG JAVA_VERSION=25
 ARG GRADLE_VERSION=9.7.1
+ARG NODE_VERSION=24.21.0
 
 ENV JAVA_HOME=/opt/java
 ENV GRADLE_HOME=/opt/gradle
-ENV PATH="${JAVA_HOME}/bin:${GRADLE_HOME}/bin:${PATH}"
+ENV NODE_HOME=/opt/node
+ENV PATH="${JAVA_HOME}/bin:${GRADLE_HOME}/bin:${NODE_HOME}/bin:${PATH}"
 ENV GRADLE_USER_HOME=/root/.gradle
+ENV NPM_CONFIG_CACHE=/root/.npm-cache
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl unzip gnupg \
+    && apt-get install -y --no-install-recommends ca-certificates curl unzip gnupg xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Eclipse Temurin JDK (latest Java version).
@@ -25,6 +28,12 @@ RUN curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSIO
     && unzip -q /tmp/gradle.zip -d /opt \
     && mv "/opt/gradle-${GRADLE_VERSION}" "${GRADLE_HOME}" \
     && rm /tmp/gradle.zip
+
+# Install Node.js (latest LTS version), used to build the React client.
+RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" -o /tmp/node.tar.xz \
+    && mkdir -p "${NODE_HOME}" \
+    && tar -xJf /tmp/node.tar.xz -C "${NODE_HOME}" --strip-components=1 \
+    && rm /tmp/node.tar.xz
 
 # Install MongoDB Community Server + the database tools (mongoimport etc).
 # There is no apt repo yet for this Ubuntu release, so we use the "noble"
@@ -42,6 +51,12 @@ WORKDIR /app
 # changes and the subsequent build can run fully offline.
 COPY settings.gradle build.gradle ./
 RUN gradle downloadDependencies --console=plain --no-daemon
+
+# Same idea for the React client: copy only its lockfile first and run a full
+# install, so the resulting npm cache is reused (with no network access
+# needed) once Gradle re-runs "npm ci" for the real build below.
+COPY client/package.json client/package-lock.json ./client/
+RUN npm ci --prefix client
 
 # Fetch the Scryfall "all cards" bulk data export and load it into Mongo at
 # build time, so the finished image already contains a populated database and
@@ -65,9 +80,10 @@ RUN mkdir -p /data/db \
     && mongod --dbpath /data/db --shutdown \
     && rm /app/data/all-cards.jsonl.gz
 
-# Now copy the actual source and build the executable jar, using the
-# dependencies already cached in GRADLE_USER_HOME.
+# Now copy the actual source (Java and React) and build the executable jar,
+# using the dependencies already cached in GRADLE_USER_HOME and NPM_CONFIG_CACHE.
 COPY src ./src
+COPY client ./client
 RUN gradle bootJar --console=plain --no-daemon --offline
 
 EXPOSE 8080

@@ -29,6 +29,40 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+def clientDir = file('client')
+def reactBuildOutput = layout.buildDirectory.dir('resources/main/static/ui')
+
+tasks.register('npmInstall', Exec) {
+    description = 'Installs the React client dependencies from the pinned lockfile.'
+    workingDir = clientDir
+    commandLine 'npm', 'ci'
+    inputs.file "${clientDir}/package.json"
+    inputs.file "${clientDir}/package-lock.json"
+    outputs.dir "${clientDir}/node_modules"
+}
+
+tasks.register('buildReactClient', Exec) {
+    description = 'Builds the React client into a static bundle.'
+    dependsOn tasks.named('npmInstall')
+    workingDir = clientDir
+    commandLine 'npm', 'run', 'build'
+    inputs.dir "${clientDir}/src"
+    inputs.file "${clientDir}/index.html"
+    inputs.file "${clientDir}/vite.config.js"
+    outputs.dir "${clientDir}/dist"
+}
+
+tasks.register('copyReactClient', Copy) {
+    description = 'Copies the built React client into the served static resources.'
+    dependsOn tasks.named('buildReactClient')
+    from "${clientDir}/dist"
+    into reactBuildOutput
+}
+
+tasks.named('classes') {
+    dependsOn tasks.named('copyReactClient')
+}
+
 // Forces resolution (and download) of every dependency in every configuration,
 // even though there is no source yet at this point. Used by the Dockerfile to
 // pre-populate the Gradle cache so the actual build can run with --offline.

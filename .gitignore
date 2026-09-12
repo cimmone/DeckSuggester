@@ -8,3 +8,7 @@ out/
 
 # Scryfall bulk data - large, fetched separately, never committed.
 *.jsonl.gz
+
+# React client build output and dependencies (npm ci restores these).
+client/node_modules/
+client/dist/
