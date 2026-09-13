@@ -31,11 +31,29 @@ tasks.named('test') {
 
 def clientDir = file('client')
 def reactBuildOutput = layout.buildDirectory.dir('resources/main/static/ui')
+def isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
+
+// On Windows, Gradle spawns npm.cmd through cmd.exe, which refuses a UNC
+// working directory (e.g. \\wsl.localhost\...) and silently falls back to
+// C:\Windows. Route the npm invocation through wsl.exe instead so it always
+// runs against the project's real Linux path, regardless of which JDK
+// launched Gradle.
+def npmCommandLine = { String... npmArgs ->
+    if (!isWindows) {
+        return ['npm', *npmArgs]
+    }
+    def linuxClientDir = providers.exec {
+        commandLine 'wsl.exe', 'wslpath', '-a', clientDir.absolutePath
+    }.standardOutput.asText.get().trim()
+    return ['wsl.exe', '--cd', linuxClientDir, '--', 'npm', *npmArgs]
+}
 
 tasks.register('npmInstall', Exec) {
     description = 'Installs the React client dependencies from the pinned lockfile.'
-    workingDir = clientDir
-    commandLine 'npm', 'ci'
+    if (!isWindows) {
+        workingDir = clientDir
+    }
+    commandLine npmCommandLine('ci')
     inputs.file "${clientDir}/package.json"
     inputs.file "${clientDir}/package-lock.json"
     outputs.dir "${clientDir}/node_modules"
@@ -44,8 +62,10 @@ tasks.register('npmInstall', Exec) {
 tasks.register('buildReactClient', Exec) {
     description = 'Builds the React client into a static bundle.'
     dependsOn tasks.named('npmInstall')
-    workingDir = clientDir
-    commandLine 'npm', 'run', 'build'
+    if (!isWindows) {
+        workingDir = clientDir
+    }
+    commandLine npmCommandLine('run', 'build')
     inputs.dir "${clientDir}/src"
     inputs.file "${clientDir}/index.html"
     inputs.file "${clientDir}/vite.config.js"

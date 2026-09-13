@@ -13,7 +13,7 @@ import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
 public class MongoConfig {
 
     @Bean
-    public MongoDatabaseFactory mongoDatabaseFactory(@Value("${spring.data.mongodb.uri}") String uri) {
+    public MongoDatabaseFactory mongoDatabaseFactory(@Value("${spring.mongodb.uri}") String uri) {
         ConnectionString connectionString = new ConnectionString(uri);
         MongoClient mongoClient = MongoClients.create(connectionString);
         return new SimpleMongoClientDatabaseFactory(mongoClient, connectionString.getDatabase());
