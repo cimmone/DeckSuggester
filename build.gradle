@@ -2,6 +2,9 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.1'
     id 'io.spring.dependency-management' version '1.1.7'
+    // Background-safe, versioned Mongo index/schema migrations (the
+    // Flyway-equivalent for MongoDB; Mongock's actively-maintained successor).
+    id 'io.flamingock' version '1.1.0'
 }
 
 group = 'com.decksuggester'
@@ -17,11 +20,32 @@ repositories {
     mavenCentral()
 }
 
+// No migrations exist yet; this just wires the plugin so ChangeUnits (e.g.
+// background index builds on decks/cards/folders) can be added later. The
+// springboot() option is deliberately omitted for now: it registers an
+// ApplicationRunner that fails startup until an AuditStore is configured,
+// which is the actual migration functionality this task defers.
+flamingock {
+    community()
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
+    // Authentication (login challenge page, session handling, BCrypt/PBKDF2
+    // password hashing with a configurable salt/pepper) for gating every
+    // route except /ui behind a logged-in user.
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    // Bean Validation for registration/login request payloads (username,
+    // password, email presence/format checks).
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // The flamingock { community() } block above already pulls in Flamingock's
+    // Mongo target-system and audit-store artifacts (flamingock-mongodb-sync-*).
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Lets tests drive/assert against secured endpoints once auth is added.
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
