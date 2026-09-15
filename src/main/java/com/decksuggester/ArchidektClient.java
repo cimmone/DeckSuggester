@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
@@ -29,38 +30,40 @@ public class ArchidektClient implements ArchidektGateway {
 
     private static final Logger log = LoggerFactory.getLogger(ArchidektClient.class);
     private static final Pattern NON_SLUG_CHARACTERS = Pattern.compile("[^a-z0-9]+");
+    private static final Pattern NEXT_DATA = Pattern.compile(
+            "<script\\b[^>]*\\bid=([\"'])__NEXT_DATA__\\1[^>]*>(.*?)</script>",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final Pattern SAFE_BUILD_ID = Pattern.compile("[A-Za-z0-9_-]+");
 
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final String baseUrl;
-    private final String buildId;
     private final long minimumIntervalMillis;
     private final long rateLimitWaitMillis;
     private final int maxRateLimitRetries;
     private final Path fixtureDirectory;
+    private volatile String requestBuildId;
     private long lastRequestNanos;
 
     @Autowired
     public ArchidektClient(
             ObjectMapper objectMapper,
             @Value("${archidekt.base-url:https://archidekt.com}") String baseUrl,
-            @Value("${archidekt.build-id:-PgKf9BovkAmhdT46ZzH2}") String buildId,
             @Value("${archidekt.minimum-request-interval-ms:100}") long minimumIntervalMillis,
             @Value("${archidekt.rate-limit-wait-ms:5000}") long rateLimitWaitMillis,
             @Value("${archidekt.max-rate-limit-retries:3}") int maxRateLimitRetries,
             @Value("${archidekt.fixture-directory:}") String fixtureDirectory) {
         this(objectMapper, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build(),
-                baseUrl, buildId, minimumIntervalMillis, rateLimitWaitMillis,
+                baseUrl, minimumIntervalMillis, rateLimitWaitMillis,
                 maxRateLimitRetries, fixtureDirectory);
     }
 
     ArchidektClient(ObjectMapper objectMapper, HttpClient httpClient, String baseUrl,
-                     String buildId, long minimumIntervalMillis, long rateLimitWaitMillis,
+                     long minimumIntervalMillis, long rateLimitWaitMillis,
                      int maxRateLimitRetries, String fixtureDirectory) {
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;
         this.baseUrl = baseUrl.replaceAll("/+$", "");
-        this.buildId = buildId;
         this.minimumIntervalMillis = Math.max(100, minimumIntervalMillis);
         this.rateLimitWaitMillis = Math.max(5000, rateLimitWaitMillis);
         this.maxRateLimitRetries = Math.max(1, maxRateLimitRetries);
@@ -71,8 +74,15 @@ public class ArchidektClient implements ArchidektGateway {
     @Override
     public JsonNode fetchFolder(long folderId) {
         Optional<JsonNode> fixture = readFixture(List.of("folder-" + folderId + ".json"));
-        return fixture.orElseGet(() -> fetchJson(baseUrl + "/_next/data/" + buildId
-                + "/folders/" + folderId + ".json?folderId=" + folderId));
+        return fixture.orElseGet(() -> {
+            String pagePath = "/folders/" + folderId;
+            String buildId = fetchBuildId(pagePath);
+            // A folder fetch starts every import, so all of its following deck
+            // requests reuse the id discovered for that import request.
+            requestBuildId = buildId;
+            return fetchJson(baseUrl + "/_next/data/" + buildId + pagePath
+                    + ".json?folderId=" + folderId);
+        });
     }
 
     @Override
@@ -82,8 +92,47 @@ public class ArchidektClient implements ArchidektGateway {
                 slug + ".json",
                 slug.replace('_', '-') + ".json",
                 "deck-" + deckId + ".json"));
-        return fixture.orElseGet(() -> fetchJson(baseUrl + "/_next/data/" + buildId
-                + "/decks/" + deckId + "/" + slug + ".json"));
+        return fixture.orElseGet(() -> {
+            String buildId = requestBuildId;
+            if (buildId == null) {
+                buildId = fetchBuildId("/decks/" + deckId + "/" + slug.replace('_', '-'));
+                requestBuildId = buildId;
+            }
+            return fetchJson(baseUrl + "/_next/data/" + buildId
+                    + "/decks/" + deckId + "/" + slug + ".json");
+        });
+    }
+
+    private String fetchBuildId(String pagePath) {
+        String pageUrl = baseUrl + pagePath;
+        return parseBuildId(fetchBody(pageUrl, "text/html,application/xhtml+xml"), pageUrl);
+    }
+
+    /**
+     * Archidekt's build id changes on every deploy; scraping it from the page's
+     * own __NEXT_DATA__ payload (rather than hardcoding it) means imports keep
+     * working across their deploys instead of silently 404ing.
+     */
+    static String parseBuildId(String html, String source) {
+        Matcher matcher = NEXT_DATA.matcher(html == null ? "" : html);
+        if (!matcher.find()) {
+            throw new ArchidektException("Archidekt page did not contain __NEXT_DATA__: "
+                    + source);
+        }
+        try {
+            JsonNode nextData = new ObjectMapper().readTree(matcher.group(2));
+            String buildId = nextData.path("buildId").asString(null);
+            if (buildId == null || !SAFE_BUILD_ID.matcher(buildId).matches()) {
+                throw new ArchidektException("Archidekt page contained an invalid build id: "
+                        + source);
+            }
+            return buildId;
+        } catch (ArchidektException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ArchidektException("Could not parse Archidekt __NEXT_DATA__: " + source,
+                    exception);
+        }
     }
 
     static String slugify(String name) {
@@ -115,9 +164,19 @@ public class ArchidektClient implements ArchidektGateway {
     }
 
     private JsonNode fetchJson(String url) {
+        String body = fetchBody(url, "application/json");
+        try {
+            return objectMapper.readTree(body);
+        } catch (Exception exception) {
+            throw new ArchidektException("Archidekt returned invalid JSON for " + url,
+                    exception);
+        }
+    }
+
+    private String fetchBody(String url, String accept) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(30))
-                .header("Accept", "application/json")
+                .header("Accept", accept)
                 .header("User-Agent", "DeckSuggester/1.0")
                 .GET()
                 .build();
@@ -150,12 +209,7 @@ public class ArchidektClient implements ArchidektGateway {
                 throw new ArchidektException("Archidekt returned HTTP "
                         + response.statusCode() + " for " + url);
             }
-            try {
-                return objectMapper.readTree(response.body());
-            } catch (Exception exception) {
-                throw new ArchidektException("Archidekt returned invalid JSON for " + url,
-                        exception);
-            }
+            return response.body();
         }
         throw new ArchidektException("Archidekt continued returning HTTP 429 for " + url);
     }

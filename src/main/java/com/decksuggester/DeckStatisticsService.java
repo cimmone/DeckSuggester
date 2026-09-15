@@ -6,7 +6,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,13 +20,17 @@ public class DeckStatisticsService {
             "Planeswalker", "Scheme", "Sorcery", "Vanguard");
 
     private final DeckRepository deckRepository;
+    private final CurrentUserService currentUser;
 
-    public DeckStatisticsService(DeckRepository deckRepository) {
+    public DeckStatisticsService(DeckRepository deckRepository, CurrentUserService currentUser) {
         this.deckRepository = deckRepository;
+        this.currentUser = currentUser;
     }
 
     public DataStatistics statistics() {
-        return calculate(deckRepository.findAll());
+        UserIdentity owner = currentUser.require();
+        return calculate(deckRepository.findAllByOwnerIdAndLibraryId(
+                owner.ownerId(), owner.libraryId()));
     }
 
     static DataStatistics calculate(List<Deck> decks) {
@@ -38,7 +41,6 @@ public class DeckStatisticsService {
         long totalCards = 0;
 
         for (Deck deck : decks) {
-            Set<String> colorsInDeck = new LinkedHashSet<>();
             for (DeckCard card : deck.getCards()) {
                 if (!card.includedInDeck()) {
                     continue;
@@ -49,15 +51,17 @@ public class DeckStatisticsService {
 
                 List<String> colors = card.colors().isEmpty()
                         ? List.of("Colorless") : card.colors();
-                colors.forEach(color -> {
-                    cardColors.merge(color, (long) quantity, Long::sum);
-                    colorsInDeck.add(color);
-                });
+                colors.forEach(color -> cardColors.merge(color, (long) quantity, Long::sum));
 
                 types(card.typeLine()).forEach(type ->
                         cardTypes.merge(type, (long) quantity, Long::sum));
             }
-            colorsInDeck.forEach(color -> deckColors.merge(color, 1L, Long::sum));
+            List<String> identity = deck.getColorIdentity();
+            if (identity.isEmpty()) {
+                deckColors.merge("Colorless", 1L, Long::sum);
+            } else {
+                identity.forEach(color -> deckColors.merge(color, 1L, Long::sum));
+            }
         }
         return new DataStatistics(decks.size(), totalCards, ordered(manaValues),
                 ordered(cardColors), ordered(deckColors), ordered(cardTypes));

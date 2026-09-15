@@ -2,7 +2,6 @@ package com.decksuggester;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,18 +19,20 @@ public class DeckController {
 
     private final DeckRepository deckRepository;
     private final DeckImportService importService;
-    private final MongoOperations mongoOperations;
+    private final CurrentUserService currentUser;
 
     public DeckController(DeckRepository deckRepository, DeckImportService importService,
-                          MongoOperations mongoOperations) {
+                          CurrentUserService currentUser) {
         this.deckRepository = deckRepository;
         this.importService = importService;
-        this.mongoOperations = mongoOperations;
+        this.currentUser = currentUser;
     }
 
     @GetMapping({"", "/"})
     public List<Deck> decks() {
-        return deckRepository.findAllByOrderByNameAsc();
+        UserIdentity owner = currentUser.require();
+        return deckRepository.findAllByOwnerIdAndLibraryIdOrderByNameAsc(
+                owner.ownerId(), owner.libraryId());
     }
 
     @PostMapping({"", "/"})
@@ -40,12 +41,14 @@ public class DeckController {
         if (request == null) {
             throw new InvalidRequestException("A JSON body containing a url is required");
         }
-        return importService.importFolder(request.url());
+        return importService.importFolder(request.url(), currentUser.require());
     }
 
     @PutMapping("/{id}")
     public Deck update(@PathVariable String id, @RequestBody DeckUpdateRequest request) {
-        Deck deck = deckRepository.findById(id)
+        UserIdentity owner = currentUser.require();
+        Deck deck = deckRepository.findByIdAndOwnerIdAndLibraryId(
+                        id, owner.ownerId(), owner.libraryId())
                 .orElseThrow(() -> new DeckNotFoundException(id));
         if (request == null || request.name() == null || request.name().isBlank()) {
             throw new InvalidRequestException("Deck name cannot be blank");
@@ -59,16 +62,18 @@ public class DeckController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
-        if (!deckRepository.existsById(id)) {
+        UserIdentity owner = currentUser.require();
+        if (deckRepository.deleteByIdAndOwnerIdAndLibraryId(
+                id, owner.ownerId(), owner.libraryId()) == 0) {
             throw new DeckNotFoundException(id);
         }
-        deckRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping({"", "/"})
     public ResponseEntity<Void> deleteAll() {
-        mongoOperations.dropCollection(Deck.class);
+        UserIdentity owner = currentUser.require();
+        deckRepository.deleteAllByOwnerIdAndLibraryId(owner.ownerId(), owner.libraryId());
         return ResponseEntity.noContent().build();
     }
 

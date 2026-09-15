@@ -20,11 +20,9 @@ repositories {
     mavenCentral()
 }
 
-// No migrations exist yet; this just wires the plugin so ChangeUnits (e.g.
-// background index builds on decks/cards/folders) can be added later. The
-// springboot() option is deliberately omitted for now: it registers an
-// ApplicationRunner that fails startup until an AuditStore is configured,
-// which is the actual migration functionality this task defers.
+// Flamingock provides Flyway-style ordered, audited and locked Mongo changes.
+// MongoMigrationRunner wires and starts it explicitly after the application is
+// ready, so large online index builds never hold up HTTP availability.
 flamingock {
     community()
 }
@@ -33,9 +31,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
-    // Authentication (login challenge page, session handling, BCrypt/PBKDF2
-    // password hashing with a configurable salt/pepper) for gating every
-    // route except /ui behind a logged-in user.
+    // Authentication (login/registration/session/password-reset), session
+    // handling, and Spring's own PBKDF2 password hashing with a configurable
+    // application-level pepper, for gating every route except /ui behind a
+    // logged-in user.
     implementation 'org.springframework.boot:spring-boot-starter-security'
     // Bean Validation for registration/login request payloads (username,
     // password, email presence/format checks).

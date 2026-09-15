@@ -33,8 +33,8 @@ class DeckStatisticsServiceTests {
                 .containsEntry("2", 1L).doesNotContainKey("9");
         assertThat(statistics.cardColors()).containsEntry("Red", 2L)
                 .containsEntry("Colorless", 1L).doesNotContainKey("Blue");
-        assertThat(statistics.deckColors()).containsEntry("Red", 1L)
-                .containsEntry("Colorless", 1L);
+        assertThat(statistics.deckColors()).containsOnlyKeys("Red")
+                .containsEntry("Red", 1L);
         assertThat(statistics.cardTypes()).containsEntry("Creature", 2L)
                 .containsEntry("Artifact", 1L);
     }

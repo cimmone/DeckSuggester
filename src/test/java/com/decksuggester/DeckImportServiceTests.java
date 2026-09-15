@@ -55,8 +55,9 @@ class DeckImportServiceTests {
         when(cardRepository.findByScryfallIdIn(any())).thenReturn(List.of());
         when(cardRepository.findByOracleIdIn(any())).thenReturn(List.of());
 
+        UserIdentity owner = new UserIdentity("alice-id", "alice", "alice-library");
         DeckImportService.ImportResult result = service.importFolder(
-                "https://archidekt.com/folders/95630");
+                "https://archidekt.com/folders/95630", owner);
 
         assertThat(result.foldersVisited()).isEqualTo(2);
         assertThat(result.decksImported()).isEqualTo(2);
@@ -69,6 +70,9 @@ class DeckImportServiceTests {
         List<Deck> saved = ((List<Deck>) captor.getValue());
         assertThat(saved).extracting(Deck::getRootFolderId).containsOnly(95630L);
         assertThat(saved).extracting(Deck::getRootFolderName).containsOnly("Home");
+        assertThat(saved).extracting(Deck::getOwnerId).containsOnly("alice-id");
+        assertThat(saved).extracting(Deck::getId).containsExactlyInAnyOrder(
+                Deck.deckId("alice-id", 26251734L), Deck.deckId("alice-id", 99L));
         DeckCard savedCard = saved.getFirst().getCards().getFirst();
         assertThat(savedCard.manaValue()).isEqualTo(5);
         assertThat(savedCard.colors()).contains("Red");

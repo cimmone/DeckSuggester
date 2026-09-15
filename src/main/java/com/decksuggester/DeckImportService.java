@@ -38,7 +38,7 @@ public class DeckImportService {
         this.deckRepository = deckRepository;
     }
 
-    public ImportResult importFolder(String folderUrl) {
+    public ImportResult importFolder(String folderUrl, UserIdentity owner) {
         long rootFolderId = extractFolderId(folderUrl);
         Queue<FolderReference> pendingFolders = new ArrayDeque<>();
         Set<Long> visitedFolders = new LinkedHashSet<>();
@@ -91,7 +91,7 @@ public class DeckImportService {
         String rootFolderName = folderNames.getOrDefault(rootFolderId,
                 "Folder " + rootFolderId);
         List<Deck> decks = parsedDecks.stream()
-                .map(parsed -> toDeck(parsed, rootFolderId, rootFolderName,
+                .map(parsed -> toDeck(owner, parsed, rootFolderId, rootFolderName,
                         importedAt, lookups))
                 .toList();
         deckRepository.saveAll(decks);
@@ -200,8 +200,8 @@ public class DeckImportService {
         return new CardLookups(byScryfallId, byOracleId);
     }
 
-    private Deck toDeck(ParsedDeck parsed, long rootFolderId, String rootFolderName,
-                        Instant importedAt, CardLookups lookups) {
+    private Deck toDeck(UserIdentity owner, ParsedDeck parsed, long rootFolderId,
+                        String rootFolderName, Instant importedAt, CardLookups lookups) {
         List<DeckCard> cards = parsed.cards().stream().map(raw -> {
             Card card = lookups.byScryfallId().get(raw.scryfallId());
             if (card == null) {
@@ -221,7 +221,7 @@ public class DeckImportService {
                     raw.includedInDeck(), true);
         }).toList();
         String slug = ArchidektClient.slugify(parsed.name()).replace('_', '-');
-        return new Deck(parsed.id(), parsed.name(), parsed.description(),
+        return new Deck(owner, parsed.id(), parsed.name(), parsed.description(),
                 "https://archidekt.com/decks/" + parsed.id() + "/" + slug,
                 rootFolderId, rootFolderName, parsed.folderId(), parsed.folderName(),
                 importedAt, cards);
