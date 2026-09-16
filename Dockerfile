@@ -2,8 +2,6 @@
 # rather than relying on a pre-built JDK/Gradle image.
 FROM ubuntu:26.04
 
-WORKDIR /app
-
 ARG JAVA_VERSION=25
 ARG GRADLE_VERSION=9.7.1
 ARG NODE_VERSION=24.21.0
@@ -45,6 +43,8 @@ RUN curl -fsSL https://pgp.mongodb.com/server-8.0.asc | gpg --dearmor -o /usr/sh
     && apt-get update \
     && apt-get install -y --no-install-recommends mongodb-org-server mongodb-database-tools \
     && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 
 # Copy only the build definition first and resolve dependencies, so this
 # (slow, network-bound) layer is cached independently of application source
