@@ -14,7 +14,7 @@ ENV GRADLE_USER_HOME=/root/.gradle
 ENV NPM_CONFIG_CACHE=/root/.npm-cache
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl unzip gnupg xz-utils \
+    && apt-get install -y --no-install-recommends ca-certificates curl unzip gnupg xz-utils jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Eclipse Temurin JDK (latest Java version).
@@ -69,16 +69,28 @@ RUN npm ci --prefix client
 # while iterating on the Dockerfile - while doing that, comment out the ARG
 # and RUN lines below and uncomment this COPY of a local download instead:
 #
-# COPY all-cards.jsonl.gz /app/data/all-cards.jsonl.gz
+#COPY all-cards.jsonl.gz /app/data/all-cards.jsonl.gz
 ARG SCRYFALL_ALL_CARDS_URL=https://data.scryfall.io/all-cards/all-cards-20260912091715.jsonl.gz
 RUN mkdir -p /app/data \
     && curl -fsSL "${SCRYFALL_ALL_CARDS_URL}" -o /app/data/all-cards.jsonl.gz
 
 RUN mkdir -p /data/db \
-    && mongod --dbpath /data/db --bind_ip 127.0.0.1 --fork --logpath /var/log/mongod-import.log \
+    && mongod --dbpath /data/db --bind_ip 127.0.0.1 --fork --logpath /var/log/mongod-import-scryfall.log \
     && zcat /app/data/all-cards.jsonl.gz | mongoimport --uri mongodb://localhost:27017/scryfall --collection cards --numInsertionWorkers 4 \
     && mongod --dbpath /data/db --shutdown \
     && rm /app/data/all-cards.jsonl.gz
+
+#COPY variants.json /app/data/variants.json
+ARG SPELLBOOK_ALL_VARIANTS_URL=https://json.commanderspellbook.com/variants.json
+RUN mkdir -p /app/data \
+    && curl -fsSL "${SPELLBOOK_ALL_VARIANTS_URL}" -o /app/data/variants.json
+
+RUN mkdir -p /data/db \
+    && mongod --dbpath /data/db --bind_ip 127.0.0.1 --fork --logpath /var/log/mongod-import-spellbook.log \
+    && jq -c '.variants' /app/data/variants.json | mongoimport --uri mongodb://localhost:27017/spellbook --collection variants --jsonArray --numInsertionWorkers 4 \
+    && jq -c '.aliases' /app/data/variants.json | mongoimport --uri mongodb://localhost:27017/spellbook --collection aliases --jsonArray --numInsertionWorkers 4 \
+    && mongod --dbpath /data/db --shutdown \
+    && rm /app/data/variants.json
 
 # Now copy the actual source (Java and React) and build the executable jar,
 # using the dependencies already cached in GRADLE_USER_HOME and NPM_CONFIG_CACHE.
