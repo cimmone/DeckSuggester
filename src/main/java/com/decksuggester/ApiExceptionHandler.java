@@ -1,5 +1,10 @@
 package com.decksuggester;
 
+import com.decksuggester.auth.AccountConflictException;
+import com.decksuggester.auth.InvalidResetTokenException;
+import com.decksuggester.cards.CardImageNotFoundException;
+import com.decksuggester.decks.ArchidektException;
+import com.decksuggester.decks.DeckNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;

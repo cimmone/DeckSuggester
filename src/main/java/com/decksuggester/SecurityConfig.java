@@ -1,5 +1,6 @@
 package com.decksuggester;
 
+import com.decksuggester.auth.UserAccountService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
