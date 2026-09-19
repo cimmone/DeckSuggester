@@ -16,6 +16,14 @@ java {
     }
 }
 
+// Keep real constructor/method parameter names in compiled class files
+// (javac strips them to arg0, arg1, ... by default) so tests can resolve a
+// not-yet-implemented bean's constructor/method parameters by name via
+// reflection instead of guessing a positional order.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << '-parameters'
+}
+
 repositories {
     mavenCentral()
 }
