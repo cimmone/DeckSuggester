@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -79,5 +80,26 @@ class DeckEditServiceTests {
     @Test
     void searchRequiresAtLeastTwoCharacters() {
         assertThat(service.searchCards("a")).isEmpty();
+    }
+
+    @Test
+    void addingACardThatIsNotAKnownScryfallCardIsRejected() {
+        Deck deck = deck();
+        when(deckRepository.findByIdAndOwnerIdAndLibraryId(deck.getId(), "alice", "alice-lib"))
+                .thenReturn(Optional.of(deck));
+        when(cardRepository.findFirstByNameIgnoreCase("Frogzilla")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.addCard(alice, deck.getId(), "Frogzilla"))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("Frogzilla");
+    }
+
+    @Test
+    void nameRegexMatchesTokensInAnyOrderAtWordBoundaries() {
+        String regex = DeckEditService.buildNameRegex("bolt light");
+        Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+        assertThat(pattern.matcher("Lightning Bolt").find()).isTrue();
+        assertThat(pattern.matcher("Bolt of Lightning").find()).isTrue();
+        assertThat(pattern.matcher("Sol Ring").find()).isFalse();
     }
 }

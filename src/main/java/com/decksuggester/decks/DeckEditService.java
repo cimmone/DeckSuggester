@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -39,11 +40,43 @@ public class DeckEditService {
         if (query == null || query.trim().length() < 2) {
             return List.of();
         }
-        String regex = Pattern.quote(query.trim());
-        return cardRepository.searchByName(regex, PageRequest.of(0, 10)).stream()
-                .map(card -> new CardSuggestion(card.getId(), card.getName(),
-                        card.getTypeLine(), card.getImageUrl()))
-                .toList();
+        // Build a case-insensitive regex where every whitespace-separated token
+        // must appear somewhere in the name (in any order), matched at a word
+        // boundary. This supports partial matches at space breaks without being
+        // anchored to the start of the name and without being case-sensitive,
+        // e.g. "bolt light" and "light bolt" both match "Lightning Bolt".
+        String regex = buildNameRegex(query);
+        // Over-fetch, then de-duplicate by card name (a card can have dozens of
+        // printings) so the autocomplete shows each distinct card once.
+        Map<String, CardSuggestion> byName = new LinkedHashMap<>();
+        for (var card : cardRepository.searchByName(regex, PageRequest.of(0, 60))) {
+            byName.putIfAbsent(normalizeName(card.getName()),
+                    new CardSuggestion(card.getId(), card.getName(),
+                            card.getTypeLine(), card.getImageUrl()));
+            if (byName.size() >= 10) {
+                break;
+            }
+        }
+        return List.copyOf(byName.values());
+    }
+
+    static String buildNameRegex(String query) {
+        String[] tokens = query.trim().split("\\s+");
+        StringBuilder regex = new StringBuilder();
+        for (String token : tokens) {
+            if (token.isBlank()) {
+                continue;
+            }
+            // Anchor each token at a word boundary so partial words match at
+            // space breaks (e.g. "light" matches "Lightning"), and quote the
+            // token so any regex metacharacters in a card name are literal.
+            regex.append("(?=.*\\b").append(Pattern.quote(token)).append(')');
+        }
+        return regex.append(".*").toString();
+    }
+
+    private static String normalizeName(String name) {
+        return name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
     }
 
     public Deck addCard(UserIdentity owner, String deckId, String cardName) {
@@ -71,10 +104,10 @@ public class DeckEditService {
             recordedName = card.getName();
             scryfallId = card.getId();
         } else {
-            cards.add(new DeckCard(null, null, cardName.trim(), 0.0, List.of(), List.of(),
-                    null, null, 1, List.of(), true, false));
-            recordedName = cardName.trim();
-            scryfallId = null;
+            // Only real Scryfall cards can be added. Refusing arbitrary text
+            // here means the deck never accumulates cards without metadata.
+            throw new InvalidRequestException(
+                    "\"" + cardName.trim() + "\" is not a known Magic card");
         }
         deck.setCards(cards);
         Deck saved = deckRepository.save(deck);

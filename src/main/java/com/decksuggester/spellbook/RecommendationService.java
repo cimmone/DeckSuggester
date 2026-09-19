@@ -1,14 +1,18 @@
 package com.decksuggester.spellbook;
 
+import com.decksuggester.cards.Card;
+import com.decksuggester.cards.CardRepository;
 import com.decksuggester.decks.Deck;
 import com.decksuggester.decks.DeckCard;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -40,10 +44,17 @@ public class RecommendationService {
     private static final double TYPE_WEIGHT = 8.0;
     private static final double PRICE_WEIGHT = 0.5;
 
-    private final ComboRepository comboRepository;
+    // Full colour names (as stored on decks) mapped to their WUBRG letter, so a
+    // deck identity can be compared against a combo's compact identity string.
+    private static final Map<String, String> COLOR_LETTERS = Map.of(
+            "white", "W", "blue", "U", "black", "B", "red", "R", "green", "G");
 
-    public RecommendationService(ComboRepository comboRepository) {
+    private final ComboRepository comboRepository;
+    private final CardRepository cardRepository;
+
+    public RecommendationService(ComboRepository comboRepository, CardRepository cardRepository) {
         this.comboRepository = comboRepository;
+        this.cardRepository = cardRepository;
     }
 
     public List<Recommendation> recommend(Deck deck, int limit) {
@@ -60,11 +71,15 @@ public class RecommendationService {
                 ownedNames.add(normalize(card.name()));
             }
         }
-        Set<String> identity = new HashSet<>(deck.getColorIdentity());
+        Set<String> identity = deckIdentityLetters(deck);
+
+        List<Combo> combos = comboRepository.findAll();
+        Map<String, Card> cardsByOracleId = loadScryfallCards(combos);
 
         List<Recommendation> scored = new ArrayList<>();
-        for (Combo combo : comboRepository.findAll()) {
-            Recommendation recommendation = score(combo, ownedOracleIds, ownedNames, identity);
+        for (Combo combo : combos) {
+            Recommendation recommendation = score(combo, ownedOracleIds, ownedNames,
+                    identity, cardsByOracleId);
             if (recommendation != null) {
                 scored.add(recommendation);
             }
@@ -73,41 +88,65 @@ public class RecommendationService {
         return scored.subList(0, Math.min(limit, scored.size()));
     }
 
+    private Map<String, Card> loadScryfallCards(List<Combo> combos) {
+        Set<String> oracleIds = new HashSet<>();
+        for (Combo combo : combos) {
+            for (Combo.ComboCard piece : combo.getCards()) {
+                if (piece.oracleId() != null) {
+                    oracleIds.add(piece.oracleId());
+                }
+            }
+        }
+        Map<String, Card> byOracleId = new HashMap<>();
+        if (!oracleIds.isEmpty()) {
+            cardRepository.findByOracleIdIn(oracleIds)
+                    .forEach(card -> byOracleId.putIfAbsent(card.getOracleId(), card));
+        }
+        return byOracleId;
+    }
+
     Recommendation score(Combo combo, Set<String> ownedOracleIds, Set<String> ownedNames,
-                         Set<String> identity) {
+                         Set<String> identity, Map<String, Card> cardsByOracleId) {
         List<Combo.ComboCard> pieces = combo.getCards();
         if (pieces.isEmpty()) {
             return null;
         }
         int owned = 0;
         double totalMana = 0.0;
-        double totalPrice = 0.0;
         int creatureCount = 0;
         int outsideIdentity = 0;
         List<RecommendedCard> missing = new ArrayList<>();
 
         for (Combo.ComboCard piece : pieces) {
+            Card scryfall = piece.oracleId() == null ? null : cardsByOracleId.get(piece.oracleId());
+            String typeLine = piece.typeLine() != null ? piece.typeLine()
+                    : (scryfall == null ? null : scryfall.getTypeLine());
+            double manaValue = scryfall != null && scryfall.getCmc() != null
+                    ? scryfall.getCmc() : 0.0;
+            List<String> pieceIdentity = scryfall == null ? List.of()
+                    : scryfall.getColorIdentity();
+
             boolean isOwned = (piece.oracleId() != null && ownedOracleIds.contains(piece.oracleId()))
                     || (piece.name() != null && ownedNames.contains(normalize(piece.name())));
             if (isOwned) {
                 owned++;
             }
-            totalMana += piece.manaValue();
-            totalPrice += piece.price() == null ? 0.0 : piece.price();
-            if (isCreature(piece.typeLine())) {
+            totalMana += manaValue;
+            if (isCreature(typeLine)) {
                 creatureCount++;
             }
-            if (!identity.isEmpty()
-                    && !identity.containsAll(piece.colorIdentity())) {
+            if (!identity.isEmpty() && !identity.containsAll(pieceIdentity)) {
                 outsideIdentity++;
             }
             if (!isOwned) {
+                String imageUrl = piece.imageUrl() != null ? piece.imageUrl()
+                        : (scryfall == null ? null : scryfall.getImageUrl());
                 missing.add(new RecommendedCard(piece.scryfallId(), piece.name(),
-                        piece.imageUrl(), piece.typeLine(), piece.manaValue(),
-                        piece.price(), pieceExplanation(piece)));
+                        imageUrl, typeLine, manaValue, pieceExplanation(typeLine)));
             }
         }
 
+        Double totalPrice = combo.getPrice();
         int required = pieces.size();
         double newPieceRatio = (double) (required - owned) / required;
         double fitness =
@@ -115,7 +154,7 @@ public class RecommendationService {
                 + IDENTITY_WEIGHT * ((double) outsideIdentity / required)
                 + MANA_WEIGHT * totalMana
                 + TYPE_WEIGHT * creatureCount
-                + PRICE_WEIGHT * totalPrice;
+                + PRICE_WEIGHT * (totalPrice == null ? 0.0 : totalPrice);
 
         String explanation = buildExplanation(combo, owned, required, outsideIdentity,
                 totalMana, creatureCount, totalPrice);
@@ -123,20 +162,12 @@ public class RecommendationService {
                 required, missing, explanation);
     }
 
-    private String pieceExplanation(Combo.ComboCard piece) {
-        StringBuilder builder = new StringBuilder();
-        if (piece.typeLine() != null) {
-            builder.append(piece.typeLine());
-        }
-        if (piece.price() != null) {
-            builder.append(builder.isEmpty() ? "" : " \u00b7 ")
-                    .append(String.format(Locale.ROOT, "$%.2f", piece.price()));
-        }
-        return builder.toString();
+    private String pieceExplanation(String typeLine) {
+        return typeLine == null ? "" : typeLine;
     }
 
     private String buildExplanation(Combo combo, int owned, int required, int outsideIdentity,
-                                    double totalMana, int creatureCount, double totalPrice) {
+                                    double totalMana, int creatureCount, Double totalPrice) {
         StringBuilder builder = new StringBuilder();
         String result = combo.getResults().isEmpty() ? combo.getDescription()
                 : String.join("; ", combo.getResults());
@@ -163,10 +194,30 @@ public class RecommendationService {
             builder.append(' ').append(creatureCount)
                     .append(" creature piece(s) make it more fragile.");
         }
-        if (totalPrice > 0) {
+        if (totalPrice != null && totalPrice > 0) {
             builder.append(String.format(Locale.ROOT, " Estimated cost $%.2f.", totalPrice));
         }
         return builder.toString();
+    }
+
+    private static Set<String> deckIdentityLetters(Deck deck) {
+        Set<String> letters = new HashSet<>();
+        for (String color : deck.getColorIdentity()) {
+            if (color == null) {
+                continue;
+            }
+            String normalized = color.trim();
+            String letter = COLOR_LETTERS.get(normalized.toLowerCase(Locale.ROOT));
+            if (letter != null) {
+                letters.add(letter);
+            } else if (normalized.length() == 1) {
+                String upper = normalized.toUpperCase(Locale.ROOT);
+                if (COLOR_LETTERS.containsValue(upper)) {
+                    letters.add(upper);
+                }
+            }
+        }
+        return letters;
     }
 
     private static boolean isCreature(String typeLine) {
@@ -185,8 +236,7 @@ public class RecommendationService {
     }
 
     public record RecommendedCard(String scryfallId, String name, String imageUrl,
-                                  String typeLine, double manaValue, Double price,
-                                  String note) {
+                                  String typeLine, double manaValue, String note) {
     }
 
     public record Recommendation(String comboId, String description, double fitness,

@@ -5,6 +5,7 @@ import io.flamingock.store.mongodb.sync.MongoDBSyncAuditStore;
 import io.flamingock.targetsystem.mongodb.springdata.MongoDBSpringDataTargetSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -19,7 +20,7 @@ public class MongoMigrationRunner {
     private final MongoTemplate mongoTemplate;
     private final boolean enabled;
 
-    public MongoMigrationRunner(MongoTemplate mongoTemplate,
+    public MongoMigrationRunner(@Qualifier("suggesterMongoTemplate") MongoTemplate mongoTemplate,
                                 @Value("${app.migrations.enabled:true}") boolean enabled) {
         this.mongoTemplate = mongoTemplate;
         this.enabled = enabled;

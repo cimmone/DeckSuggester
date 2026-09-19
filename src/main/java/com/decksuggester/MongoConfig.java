@@ -3,10 +3,10 @@ package com.decksuggester;
 import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
@@ -26,9 +26,10 @@ import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
  *
  * A single {@link MongoClient} is shared across all three databases (they live
  * on the same host/credentials); each database gets its own
- * {@link MongoDatabaseFactory} and {@link MongoTemplate}. The suggester
- * template is {@link Primary} so the migration runner and any un-qualified
- * injection point keeps working.
+ * {@link MongoDatabaseFactory} and {@link MongoTemplate}. There is no primary
+ * bean of either type &mdash; every injection point (here, in
+ * {@link RepositoryConfig} and in {@link MongoMigrationRunner}) names the
+ * database it wants with an explicit bean name or {@link Qualifier}.
  */
 @Configuration
 public class MongoConfig {
@@ -51,30 +52,23 @@ public class MongoConfig {
     }
 
     @Bean
-    public MongoTemplate scryfallMongoTemplate(MongoDatabaseFactory scryfallDatabaseFactory) {
+    public MongoTemplate scryfallMongoTemplate(
+            @Qualifier("scryfallDatabaseFactory") MongoDatabaseFactory scryfallDatabaseFactory) {
         return new MongoTemplate(scryfallDatabaseFactory);
     }
 
     // --- suggester (users, decks, history) --------------------------------
 
     @Bean
-    @Primary
     public MongoDatabaseFactory suggesterDatabaseFactory(
             MongoClient client, @Value("${mongodb.suggester-database}") String database) {
         return factory(client, database);
     }
 
     @Bean
-    public MongoTemplate suggesterMongoTemplate(MongoDatabaseFactory suggesterDatabaseFactory) {
+    public MongoTemplate suggesterMongoTemplate(
+            @Qualifier("suggesterDatabaseFactory") MongoDatabaseFactory suggesterDatabaseFactory) {
         return new MongoTemplate(suggesterDatabaseFactory);
-    }
-
-    // The migration runner injects a plain MongoTemplate; keep that pointed at
-    // the suggester database (where users/decks/history now live).
-    @Bean
-    @Primary
-    public MongoTemplate mongoTemplate(MongoTemplate suggesterMongoTemplate) {
-        return suggesterMongoTemplate;
     }
 
     // --- spellbook (combo recommendations) --------------------------------
@@ -86,7 +80,8 @@ public class MongoConfig {
     }
 
     @Bean
-    public MongoTemplate spellbookMongoTemplate(MongoDatabaseFactory spellbookDatabaseFactory) {
+    public MongoTemplate spellbookMongoTemplate(
+            @Qualifier("spellbookDatabaseFactory") MongoDatabaseFactory spellbookDatabaseFactory) {
         return new MongoTemplate(spellbookDatabaseFactory);
     }
 
