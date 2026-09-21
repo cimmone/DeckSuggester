@@ -35,11 +35,7 @@ public class DeckHistoryService {
         return saved;
     }
 
-    /**
-     * Removes the oldest entries so the collection never exceeds the configured
-     * cap. Implemented as an explicit trim rather than a TTL so the window is
-     * strictly count-based (the most recent 300 edits), independent of age.
-     */
+    /** Trims the oldest entries so the collection never exceeds the configured cap. */
     void prune() {
         long total = repository.count();
         long excess = total - maxEntries;

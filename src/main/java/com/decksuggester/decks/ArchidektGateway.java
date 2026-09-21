@@ -2,6 +2,7 @@ package com.decksuggester.decks;
 
 import tools.jackson.databind.JsonNode;
 
+/** Gateway to the Archidekt public folder/deck API. */
 public interface ArchidektGateway {
 
     JsonNode fetchFolder(long folderId);

@@ -1,5 +1,6 @@
 package com.decksuggester;
 
+import com.decksuggester.migrations.SpellbookIndexTarget;
 import io.flamingock.community.Flamingock;
 import io.flamingock.store.mongodb.sync.MongoDBSyncAuditStore;
 import io.flamingock.targetsystem.mongodb.springdata.MongoDBSpringDataTargetSystem;
@@ -18,11 +19,14 @@ public class MongoMigrationRunner {
     private static final Logger log = LoggerFactory.getLogger(MongoMigrationRunner.class);
 
     private final MongoTemplate mongoTemplate;
+    private final MongoTemplate spellbookMongoTemplate;
     private final boolean enabled;
 
     public MongoMigrationRunner(@Qualifier("suggesterMongoTemplate") MongoTemplate mongoTemplate,
+                                @Qualifier("spellbookMongoTemplate") MongoTemplate spellbookMongoTemplate,
                                 @Value("${app.migrations.enabled:true}") boolean enabled) {
         this.mongoTemplate = mongoTemplate;
+        this.spellbookMongoTemplate = spellbookMongoTemplate;
         this.enabled = enabled;
     }
 
@@ -47,6 +51,11 @@ public class MongoMigrationRunner {
                     .setAuditStore(auditStore)
                     .addTargetSystem(target)
                     .addDependency(MongoTemplate.class, mongoTemplate)
+                    // The spellbook template (combo variants collection) is handed
+                    // to changes through a wrapper type so it does not clash with
+                    // the suggester template already registered under MongoTemplate.
+                    .addDependency(SpellbookIndexTarget.class,
+                            new SpellbookIndexTarget(spellbookMongoTemplate))
                     .setServiceIdentifier("deck-suggester")
                     .setThrowExceptionIfCannotObtainLock(false)
                     .build()

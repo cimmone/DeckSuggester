@@ -11,13 +11,7 @@ public class UiController {
         return "forward:/ui/index.html";
     }
 
-    /**
-     * Deep links into the single-page app (for example the per-deck editor at
-     * {@code /ui/decks/{uuid}}) must serve the SPA shell so the client-side
-     * router can render the requested view. Static asset paths (which contain a
-     * dot, e.g. {@code /ui/assets/app.js}) are excluded so they resolve to the
-     * real files rather than the HTML shell.
-     */
+    /** Serves the SPA shell for deep links; paths with a dot (static assets) are excluded. */
     @GetMapping("/ui/{path:[^\\.]*}")
     public String uiRoute() {
         return "forward:/ui/index.html";

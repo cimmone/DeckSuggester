@@ -48,30 +48,26 @@ public class UserAccountService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return repository.findByUsernameKey(key(username))
-                .map(AccountPrincipal::new)
+                .map(UserPrincipal::new)
                 .orElseThrow(() -> new UsernameNotFoundException("Unknown account"));
     }
 
-    /**
-     * Registers a new account. The library id is generated here rather than
-     * collected from the user: it only needs to be unique, not memorable or
-     * chosen, so asking for it at signup would just be friction.
-     */
+    /** Registers a new account, generating its library id rather than asking the user for one. */
     public UserAccount register(String username, String password, String email) {
         String usernameKey = key(username);
         String emailKey = key(email);
         if (repository.existsByUsernameKey(usernameKey)) {
-            throw new AccountConflictException("That username is already in use");
+            throw new UsernameAlreadyTakenException("That username is already in use");
         }
         if (repository.existsByEmailKey(emailKey)) {
-            throw new AccountConflictException("That email is already in use");
+            throw new UsernameAlreadyTakenException("That email is already in use");
         }
         UserAccount account = new UserAccount(username.trim(), usernameKey, email.trim(),
                 emailKey, passwordEncoder.encode(password), allocateLibraryId(), Instant.now());
         try {
             return repository.save(account);
         } catch (DuplicateKeyException exception) {
-            throw new AccountConflictException("Username or email is already in use");
+            throw new UsernameAlreadyTakenException("Username or email is already in use");
         }
     }
 

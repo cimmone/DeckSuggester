@@ -18,7 +18,7 @@ public class Deck {
     private String id;
     private String ownerId;
     private String libraryId;
-    private long archidektId;
+    private long sourceId;
     private String name;
     private String description;
     private String sourceUrl;
@@ -30,16 +30,33 @@ public class Deck {
     private List<String> colorIdentity;
     private List<DeckCard> cards;
 
+    /** Origin of the deck; {@code null} on older decks deserializes as Archidekt. */
+    private DeckSource source;
+
+    /** The signature card(s)/commander(s) the deck is built around. */
+    private List<DeckCard> signatureCards;
+
+    /** Optional {@link Folder} id the deck lives in; null means the library root. */
+    private String folderRef;
+
     public Deck() {
     }
 
-    public Deck(UserIdentity owner, long archidektId, String name, String description,
+    public Deck(UserIdentity owner, long sourceId, String name, String description,
                 String sourceUrl, long rootFolderId, String rootFolderName, long folderId,
                 String folderName, Instant importedAt, List<DeckCard> cards) {
-        this.id = deckId(owner.ownerId(), archidektId);
+        this(owner, sourceId, name, description, sourceUrl, rootFolderId, rootFolderName,
+                folderId, folderName, importedAt, cards, DeckSource.ARCHIDEKT, List.of(), null);
+    }
+
+    public Deck(UserIdentity owner, long sourceId, String name, String description,
+                String sourceUrl, long rootFolderId, String rootFolderName, long folderId,
+                String folderName, Instant importedAt, List<DeckCard> cards,
+                DeckSource source, List<DeckCard> signatureCards, String folderRef) {
+        this.id = deckId(owner.ownerId(), sourceId);
         this.ownerId = owner.ownerId();
         this.libraryId = owner.libraryId();
-        this.archidektId = archidektId;
+        this.sourceId = sourceId;
         this.name = name;
         this.description = description;
         this.sourceUrl = sourceUrl;
@@ -49,23 +66,23 @@ public class Deck {
         this.folderName = folderName;
         this.importedAt = importedAt;
         this.cards = cards == null ? List.of() : List.copyOf(cards);
-        this.colorIdentity = computeColorIdentity(this.cards);
+        this.signatureCards = signatureCards == null ? List.of() : List.copyOf(signatureCards);
+        this.colorIdentity = computeColorIdentity(this.signatureCards, this.cards);
+        this.source = source;
+        this.folderRef = folderRef;
     }
 
-    /**
-     * Test-only convenience constructor for units that exercise deck logic
-     * without needing a real authenticated owner.
-     */
-    Deck(long archidektId, String name, String description, String sourceUrl,
+    /** Test-only convenience constructor that doesn't need a real authenticated owner. */
+    Deck(long sourceId, String name, String description, String sourceUrl,
          long rootFolderId, String rootFolderName, long folderId, String folderName,
          Instant importedAt, List<DeckCard> cards) {
-        this(new UserIdentity("test-owner", "test-owner", "test-library"), archidektId, name,
+        this(new UserIdentity("test-owner", "test-owner", "test-library"), sourceId, name,
                 description, sourceUrl, rootFolderId, rootFolderName, folderId, folderName,
                 importedAt, cards);
     }
 
-    static String deckId(String ownerId, long archidektId) {
-        return UUID.nameUUIDFromBytes((ownerId + ":" + archidektId)
+    static String deckId(String ownerId, long sourceId) {
+        return UUID.nameUUIDFromBytes((ownerId + ":" + sourceId)
                 .getBytes(StandardCharsets.UTF_8)).toString();
     }
 
@@ -83,8 +100,8 @@ public class Deck {
         return libraryId;
     }
 
-    public long getArchidektId() {
-        return archidektId;
+    public long getSourceId() {
+        return sourceId;
     }
 
     public String getName() {
@@ -127,6 +144,33 @@ public class Deck {
         return importedAt;
     }
 
+    public DeckSource getSource() {
+        // Older imported documents predate this field; deserialize as null and
+        // are treated as Archidekt imports for backwards compatibility.
+        return source == null ? DeckSource.ARCHIDEKT : source;
+    }
+
+    public void setSource(DeckSource source) {
+        this.source = source;
+    }
+
+    public List<DeckCard> getSignatureCards() {
+        return signatureCards == null ? List.of() : signatureCards;
+    }
+
+    public void setSignatureCards(List<DeckCard> signatureCards) {
+        this.signatureCards = signatureCards == null ? List.of() : List.copyOf(signatureCards);
+        this.colorIdentity = computeColorIdentity(this.signatureCards, this.cards);
+    }
+
+    public String getFolderRef() {
+        return folderRef;
+    }
+
+    public void setFolderRef(String folderRef) {
+        this.folderRef = folderRef == null || folderRef.isBlank() ? null : folderRef;
+    }
+
     public List<String> getColorIdentity() {
         // Older imported documents predate this field. Derive a safe fallback
         // so they are not incorrectly presented as colorless after upgrade.
@@ -137,30 +181,31 @@ public class Deck {
         return cards == null ? List.of() : cards;
     }
 
-    /**
-     * Replaces the deck's card list and recomputes the cached color identity.
-     * Used by the deck editor when cards are added or removed.
-     */
+    /** Replaces the deck's card list and recomputes the cached color identity. */
     public void setCards(List<DeckCard> cards) {
         this.cards = cards == null ? List.of() : List.copyOf(cards);
-        this.colorIdentity = computeColorIdentity(this.cards);
+        this.colorIdentity = computeColorIdentity(this.signatureCards, this.cards);
     }
 
-    /**
-     * A deck's color identity is the identity of its commander(s) when one is
-     * designated; otherwise it falls back to the identity of every included
-     * card, which is the best available signal for non-Commander decks.
-     */
+    /** A deck's color identity is its signature card(s)', or every card's if none is set. */
     static List<String> computeColorIdentity(List<DeckCard> cards) {
+        return computeColorIdentity(null, cards);
+    }
+
+    static List<String> computeColorIdentity(List<DeckCard> signatureCards, List<DeckCard> cards) {
         if (cards == null) {
             return List.of();
         }
+        List<DeckCard> includedSignature = signatureCards == null ? List.of()
+                : signatureCards.stream().filter(DeckCard::includedInDeck).toList();
         List<DeckCard> included = cards.stream().filter(DeckCard::includedInDeck).toList();
-        List<DeckCard> commanders = included.stream()
-                .filter(card -> card.categories().stream()
-                        .anyMatch(category -> category.toLowerCase(Locale.ROOT)
-                                .contains("commander")))
-                .toList();
+        List<DeckCard> commanders = includedSignature.isEmpty()
+                ? included.stream()
+                        .filter(card -> card.categories().stream()
+                                .anyMatch(category -> category.toLowerCase(Locale.ROOT)
+                                        .contains("commander")))
+                        .toList()
+                : includedSignature;
         List<DeckCard> identitySource = commanders.isEmpty() ? included : commanders;
         return identitySource.stream().flatMap(card -> card.colorIdentity().stream())
                 .distinct().toList();

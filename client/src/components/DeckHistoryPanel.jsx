@@ -23,18 +23,18 @@ function isUndoable(entry) {
 }
 
 export function DeckHistoryPanel({ securedFetch, onClose, onUndo, refreshKey }) {
-  const [state, setState] = useState({ loading: true, error: null, entries: [] });
+  const [state, setState] = useState({ busy: true, error: null, entries: [] });
   const [undoing, setUndoing] = useState(null);
 
   const load = useCallback(async () => {
-    setState((current) => ({ ...current, loading: true }));
+    setState((current) => ({ ...current, busy: true }));
     try {
       const response = await securedFetch('/decks/history');
       if (!response.ok) throw new Error('Could not load the deck history.');
       const entries = await response.json();
-      setState({ loading: false, error: null, entries });
+      setState({ busy: false, error: null, entries });
     } catch (error) {
-      setState({ loading: false, error: error.message, entries: [] });
+      setState({ busy: false, error: error.message, entries: [] });
     }
   }, [securedFetch]);
 
@@ -59,9 +59,9 @@ export function DeckHistoryPanel({ securedFetch, onClose, onUndo, refreshKey }) 
         </div>
         <button className="close-button" onClick={onClose} aria-label="Close history">×</button>
       </div>
-      {state.loading && <div className="empty-state">Loading history…</div>}
+      {state.busy && <div className="empty-state">Loading history…</div>}
       {state.error && <div className="notice error"><span>{state.error}</span></div>}
-      {!state.loading && !state.error && state.entries.length === 0 && (
+      {!state.busy && !state.error && state.entries.length === 0 && (
         <div className="empty-state">No deck edits recorded yet.</div>
       )}
       <ol className="history-list">

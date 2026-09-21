@@ -4,23 +4,14 @@ import com.decksuggester.auth.UserAccountRepository;
 import com.decksuggester.cards.CardRepository;
 import com.decksuggester.decks.DeckHistoryRepository;
 import com.decksuggester.decks.DeckRepository;
+import com.decksuggester.decks.FolderRepository;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 /**
- * Binds each repository family to the Mongo database that owns its collections.
- *
- * <ul>
- *   <li>{@link CardRepository} (cards feature) &rarr; scryfall database.</li>
- *   <li>{@link DeckRepository}, {@link DeckHistoryRepository} (decks feature) and
- *       {@link UserAccountRepository} (auth feature) &rarr; suggester database.</li>
- *   <li>{@link com.decksuggester.spellbook.ComboRepository} &rarr; spellbook
- *       database.</li>
- * </ul>
- *
- * The repositories live across several feature packages, so we bind them
- * explicitly with {@code basePackageClasses} rather than by package sweep,
- * keeping each family on its correct template.
+ * Binds each repository family to the Mongo database that owns its collections, using
+ * {@code basePackageClasses} rather than a package sweep since the repositories span
+ * several feature packages but must each land on a specific template.
  */
 @Configuration
 public class RepositoryConfig {
@@ -36,8 +27,9 @@ public class RepositoryConfig {
     @EnableMongoRepositories(
             basePackageClasses = {
                     DeckRepository.class,
-                    UserAccountRepository.class,
-                    DeckHistoryRepository.class
+                    DeckHistoryRepository.class,
+                    FolderRepository.class,
+                    UserAccountRepository.class
             },
             mongoTemplateRef = "suggesterMongoTemplate")
     static class SuggesterRepositories {

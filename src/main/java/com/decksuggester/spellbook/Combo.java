@@ -10,15 +10,11 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A Commander Spellbook combo. This maps the "variants" documents exported from
- * <a href="https://json.commanderspellbook.com/variants.json">Commander
- * Spellbook</a> and loaded into the {@code variants} collection of the
- * spellbook database (see the Dockerfile import step).
- *
- * <p>Each variant lists the cards it {@code uses}, the features it
- * {@code produces}, a colour {@code identity} (a compact string of WUBRG
- * letters, e.g. {@code "RGWU"}), a human {@code description}, and aggregate
- * {@code prices}.</p>
+ * A Commander Spellbook combo, mapped from the "variants" documents exported from
+ * <a href="https://json.commanderspellbook.com/variants.json">Commander Spellbook</a>
+ * into the {@code variants} collection: the cards it {@code uses}, the features it
+ * {@code produces}, a colour {@code identity} (compact WUBRG letters, e.g. {@code "RGWU"}),
+ * a human {@code description}, and aggregate {@code prices}.
  */
 @Document(collection = "variants")
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -31,6 +27,8 @@ public class Combo {
     private List<Produce> produces;
     private String identity;
     private Prices prices;
+    private ComboLegalities legalities;
+    private Integer popularity;
 
     public Combo() {
     }
@@ -51,10 +49,7 @@ public class Combo {
         return produces == null ? Collections.emptyList() : produces;
     }
 
-    /**
-     * The colour identity as a compact WUBRG letter string (e.g. {@code "RGW"}).
-     * Colourless combos have an empty identity ({@code "C"} is normalised away).
-     */
+    /** Compact WUBRG identity string (e.g. {@code "RGW"}); colourless combos use the literal {@code "C"}, not an empty string. */
     public String getIdentity() {
         return identity == null ? "" : identity;
     }
@@ -63,10 +58,17 @@ public class Combo {
         return prices;
     }
 
-    /**
-     * The cards required by this combo. Convenience view over {@link #getUses()}
-     * that exposes the piece card details plus the required quantity.
-     */
+    /** Per-format legality flags exported by Commander Spellbook, used via {@link ComboLegalities#commander()} to prune ineligible combos before scoring. */
+    public ComboLegalities getLegalities() {
+        return legalities;
+    }
+
+    /** Commander Spellbook popularity score; higher is more popular. */
+    public Integer getPopularity() {
+        return popularity;
+    }
+
+    /** The cards required by this combo, flattened from {@link #getUses()} with each piece's required quantity. */
     public List<ComboCard> getCards() {
         List<ComboCard> cards = new ArrayList<>();
         for (Use use : getUses()) {
@@ -80,9 +82,7 @@ public class Combo {
         return cards;
     }
 
-    /**
-     * The features this combo produces, used to explain why it is worth adding.
-     */
+    /** The features this combo produces, used to explain why it is worth adding. */
     public List<String> getResults() {
         List<String> results = new ArrayList<>();
         for (Produce produce : getProduces()) {
@@ -93,11 +93,7 @@ public class Combo {
         return results;
     }
 
-    /**
-     * The best available aggregate combo price, in the order Commander
-     * Spellbook prefers (TCGplayer, then Card Kingdom, then Cardmarket), or
-     * {@code null} when no price is known.
-     */
+    /** Best available aggregate price (TCGplayer, then Card Kingdom, then Cardmarket), or {@code null} when unknown. */
     public Double getPrice() {
         if (prices == null) {
             return null;
@@ -136,11 +132,7 @@ public class Combo {
             String typeLine,
             @Field("imageUriFrontNormal") String imageUrl) {
 
-        /**
-         * Commander Spellbook keys its own card ids; the Scryfall id is derived
-         * from the image URL when present. The image URL contains the Scryfall
-         * UUID (e.g. {@code .../normal/front/9/8/<uuid>.jpg?...}).
-         */
+        /** The Scryfall id, derived from the image URL's UUID segment (e.g. {@code .../normal/front/9/8/<uuid>.jpg?...}). */
         public String scryfallId() {
             if (imageUrl == null) {
                 return null;
@@ -166,6 +158,17 @@ public class Combo {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Prices(String tcgplayer, String cardkingdom, String cardmarket) {
+    }
+
+    /** Per-format legality flags mirrored from the Commander Spellbook export. */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record ComboLegalities(
+            boolean commander,
+            boolean vintage,
+            boolean legacy,
+            boolean modern,
+            boolean pauper,
+            boolean oathbreaker) {
     }
 
     /**

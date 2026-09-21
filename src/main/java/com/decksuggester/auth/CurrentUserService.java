@@ -11,7 +11,7 @@ public class CurrentUserService {
     public UserIdentity require() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
-                || !(authentication.getPrincipal() instanceof AccountPrincipal principal)) {
+                || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
             throw new AuthenticationCredentialsNotFoundException("Authentication is required");
         }
         return UserIdentity.from(principal);

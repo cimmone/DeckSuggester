@@ -8,25 +8,25 @@ import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
 
-public final class AccountPrincipal implements UserDetails {
+public final class UserPrincipal implements UserDetails {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private final String accountId;
+    private final String userId;
     private final String username;
     private final String passwordHash;
     private final String libraryId;
 
-    public AccountPrincipal(UserAccount account) {
-        this.accountId = account.getId();
+    public UserPrincipal(UserAccount account) {
+        this.userId = account.getId();
         this.username = account.getUsername();
         this.passwordHash = account.getPasswordHash();
         this.libraryId = account.getLibraryId();
     }
 
-    public String accountId() {
-        return accountId;
+    public String userId() {
+        return userId;
     }
 
     public String libraryId() {

@@ -4,10 +4,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class HomeController {
+public class HealthController {
 
     @GetMapping("/")
-    public String home() {
+    public String status() {
         return "DeckSuggester is running";
     }
 

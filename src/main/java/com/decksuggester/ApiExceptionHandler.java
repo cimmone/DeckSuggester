@@ -1,10 +1,12 @@
 package com.decksuggester;
 
-import com.decksuggester.auth.AccountConflictException;
 import com.decksuggester.auth.InvalidResetTokenException;
+import com.decksuggester.auth.UsernameAlreadyTakenException;
 import com.decksuggester.cards.CardImageNotFoundException;
 import com.decksuggester.decks.ArchidektException;
 import com.decksuggester.decks.DeckNotFoundException;
+import com.decksuggester.decks.FolderNotFoundException;
+import com.decksuggester.decks.MoxfieldException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -34,15 +36,27 @@ public class ApiExceptionHandler {
         return new ApiError(502, exception.getMessage(), Instant.now());
     }
 
+    @ExceptionHandler(MoxfieldException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ApiError moxfieldError(MoxfieldException exception) {
+        return new ApiError(502, exception.getMessage(), Instant.now());
+    }
+
+    @ExceptionHandler(FolderNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError folderNotFound(FolderNotFoundException exception) {
+        return new ApiError(404, exception.getMessage(), Instant.now());
+    }
+
     @ExceptionHandler(CardImageNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ApiError imageNotFound(CardImageNotFoundException exception) {
         return new ApiError(404, exception.getMessage(), Instant.now());
     }
 
-    @ExceptionHandler(AccountConflictException.class)
+    @ExceptionHandler(UsernameAlreadyTakenException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiError accountConflict(AccountConflictException exception) {
+    public ApiError usernameAlreadyTaken(UsernameAlreadyTakenException exception) {
         return new ApiError(409, exception.getMessage(), Instant.now());
     }
 

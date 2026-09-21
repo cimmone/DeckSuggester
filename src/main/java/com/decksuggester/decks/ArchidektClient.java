@@ -108,11 +108,7 @@ public class ArchidektClient implements ArchidektGateway {
         return parseBuildId(fetchBody(pageUrl, "text/html,application/xhtml+xml"), pageUrl);
     }
 
-    /**
-     * Archidekt's build id changes on every deploy; scraping it from the page's
-     * own __NEXT_DATA__ payload (rather than hardcoding it) means imports keep
-     * working across their deploys instead of silently 404ing.
-     */
+    /** Scrapes Archidekt's build id from the page's own __NEXT_DATA__ payload. */
     static String parseBuildId(String html, String source) {
         Matcher matcher = NEXT_DATA.matcher(html == null ? "" : html);
         if (!matcher.find()) {

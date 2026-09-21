@@ -89,7 +89,7 @@ function SortableHeader({ columns, sort, onSort, editable }) {
   );
 }
 
-export function CardTable({ cards, editable, onAdd, onRemove }) {
+export function CardTable({ cards, editable, onAddCard, onRemove }) {
   const [sort, setSort] = useState({ key: 'name', direction: 'asc' });
 
   const sorted = useMemo(
@@ -126,7 +126,7 @@ export function CardTable({ cards, editable, onAdd, onRemove }) {
                   onClick={() => onRemove(card)}>−</button>
                 <button type="button" className="pill-button add"
                   title={`Add another ${card.name}`}
-                  onClick={() => onAdd(card)}>+</button>
+                  onClick={() => onAddCard(card.name)}>+</button>
               </td>
             )}
           </tr>

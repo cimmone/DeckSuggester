@@ -20,10 +20,11 @@ class DeckControllerTests {
     private final DeckEditService editService = mock(DeckEditService.class);
     private final DeckHistoryService historyService = mock(DeckHistoryService.class);
     private final RecommendationService recommendationService = mock(RecommendationService.class);
+    private final FolderService folderService = mock(FolderService.class);
     private final CurrentUserService currentUser = mock(CurrentUserService.class);
     private final DeckController controller =
             new DeckController(deckRepository, importService, editService, historyService,
-                    recommendationService, currentUser);
+                    recommendationService, folderService, currentUser);
     private final UserIdentity alice = new UserIdentity("alice-id", "alice", "alice-library");
 
     @Test
@@ -38,14 +39,14 @@ class DeckControllerTests {
                 .thenReturn(1L);
 
         controller.decks();
-        controller.importDecks(new DeckController.ImportRequest(
+        controller.importDeck(new DeckController.ImportRequest(
                 "https://archidekt.com/folders/95630"));
         controller.update("deck-1", new DeckController.DeckUpdateRequest("Renamed", null));
         controller.delete("deck-2");
         controller.deleteAll();
 
         verify(deckRepository).findAllByOwnerIdAndLibraryIdOrderByNameAsc("alice-id", "alice-library");
-        verify(importService).importFolder(eq("https://archidekt.com/folders/95630"), eq(alice));
+        verify(importService).importByUrl(eq("https://archidekt.com/folders/95630"), eq(alice));
         verify(deckRepository).deleteByIdAndOwnerIdAndLibraryId("deck-2", "alice-id", "alice-library");
         verify(deckRepository).deleteAllByOwnerIdAndLibraryId("alice-id", "alice-library");
     }

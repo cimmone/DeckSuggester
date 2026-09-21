@@ -26,34 +26,44 @@ public class DeckController {
     private final DeckEditService editService;
     private final DeckHistoryService historyService;
     private final RecommendationService recommendationService;
+    private final FolderService folderService;
     private final CurrentUserService currentUser;
 
     public DeckController(DeckRepository deckRepository, DeckImportService importService,
                           DeckEditService editService, DeckHistoryService historyService,
                           RecommendationService recommendationService,
-                          CurrentUserService currentUser) {
+                          FolderService folderService, CurrentUserService currentUser) {
         this.deckRepository = deckRepository;
         this.importService = importService;
         this.editService = editService;
         this.historyService = historyService;
         this.recommendationService = recommendationService;
+        this.folderService = folderService;
         this.currentUser = currentUser;
     }
 
-    @GetMapping({"", "/"})
+    @GetMapping({ "", "/" })
     public List<Deck> decks() {
         UserIdentity owner = currentUser.require();
         return deckRepository.findAllByOwnerIdAndLibraryIdOrderByNameAsc(
                 owner.ownerId(), owner.libraryId());
     }
 
-    @PostMapping({"", "/"})
+    /** Imports a deck (or Archidekt folder of decks) from a pasted URL. */
+    @PostMapping({ "", "/" })
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
-    public DeckImportService.ImportResult importDecks(@RequestBody ImportRequest request) {
-        if (request == null) {
+    public DeckImportService.ImportResult importDeck(@RequestBody ImportRequest request) {
+        if (request == null || request.url() == null || request.url().isBlank()) {
             throw new InvalidRequestException("A JSON body containing a url is required");
         }
-        return importService.importFolder(request.url(), currentUser.require());
+        return importService.importByUrl(request.url(), currentUser.require());
+    }
+
+    /** Creates a deck from a pasted card list plus a required signature card. */
+    @PostMapping({ "/manual", "/manual/" })
+    @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
+    public Deck importManualDeck(@RequestBody DeckImportService.ManualImportRequest request) {
+        return importService.importManualDeck(request, currentUser.require());
     }
 
     @PutMapping("/{id}")
@@ -82,7 +92,7 @@ public class DeckController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping({"", "/"})
+    @DeleteMapping({ "", "/" })
     public ResponseEntity<Void> deleteAll() {
         UserIdentity owner = currentUser.require();
         deckRepository.deleteAllByOwnerIdAndLibraryId(owner.ownerId(), owner.libraryId());
@@ -122,13 +132,27 @@ public class DeckController {
         return editService.removeCard(owner, id, request.name());
     }
 
+    /** Moves a deck into a folder, or to the library root when {@code folderId} is blank. */
+    @PutMapping("/{id}/folder")
+    public Deck moveDeckToFolder(@PathVariable String id,
+                                 @RequestBody MoveDeckFolderRequest request) {
+        return folderService.moveDeck(currentUser.require(), id,
+                request == null ? null : request.folderId());
+    }
+
     @GetMapping("/{id}/recommendations")
-    public List<RecommendationService.Recommendation> recommendations(@PathVariable String id) {
+    public List<RecommendationService.Recommendation> recommendations(
+            @PathVariable String id,
+            @org.springframework.web.bind.annotation.RequestParam(
+                    value = "filter", defaultValue = "legal") String filter,
+            @org.springframework.web.bind.annotation.RequestParam(
+                    value = "format", defaultValue = "commander") String format) {
         UserIdentity owner = currentUser.require();
         Deck deck = deckRepository.findByIdAndOwnerIdAndLibraryId(
                         id, owner.ownerId(), owner.libraryId())
                 .orElseThrow(() -> new DeckNotFoundException(id));
-        return recommendationService.recommend(deck, 50);
+        RecommendationService.FilterMode mode = RecommendationService.FilterMode.fromQuery(filter);
+        return recommendationService.recommend(deck, 50, mode, format);
     }
 
     @GetMapping("/history")
@@ -141,6 +165,9 @@ public class DeckController {
     }
 
     public record ImportRequest(String url) {
+    }
+
+    public record MoveDeckFolderRequest(String folderId) {
     }
 
     public record DeckUpdateRequest(String name, String description) {

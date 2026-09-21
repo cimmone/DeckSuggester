@@ -12,6 +12,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Locale;
 
+/** Proxies Scryfall card images; a byte-stream proxy, so it skips the Client/Gateway split used for Archidekt/Moxfield. */
 @Service
 public class ScryfallImageService {
 
@@ -34,9 +35,16 @@ public class ScryfallImageService {
     }
 
     public ProxiedImage fetch(String scryfallId) {
+        return fetch(scryfallId, null);
+    }
+
+    /** Fetches a card image; {@code face="back"} proxies the second face if the card has one. */
+    public ProxiedImage fetch(String scryfallId, String face) {
         Card card = cardRepository.findFirstByScryfallId(scryfallId)
                 .orElseThrow(CardImageNotFoundException::new);
-        URI uri = validatedScryfallUri(card.getImageUrl());
+        String imageUrl = "back".equalsIgnoreCase(face) && card.getBackImageUrl() != null
+                ? card.getBackImageUrl() : card.getImageUrl();
+        URI uri = validatedScryfallUri(imageUrl);
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(20))
                 .header("Accept", "image/*")

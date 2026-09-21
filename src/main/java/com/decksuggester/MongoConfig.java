@@ -12,24 +12,10 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
 
 /**
- * The application now spans three logical Mongo databases:
- *
- * <ul>
- *   <li><b>scryfall</b> &mdash; the read-only Scryfall bulk card data.</li>
- *   <li><b>suggester</b> &mdash; user accounts, imported decks and the rolling
- *       deck-edit history. This data was historically stored in the scryfall
- *       database; {@code _0004__MoveUserDeckDataToSuggester} migrates it across
- *       without orphaning anything.</li>
- *   <li><b>spellbook</b> &mdash; Commander Spellbook combo/recommendation
- *       data.</li>
- * </ul>
- *
- * A single {@link MongoClient} is shared across all three databases (they live
- * on the same host/credentials); each database gets its own
- * {@link MongoDatabaseFactory} and {@link MongoTemplate}. There is no primary
- * bean of either type &mdash; every injection point (here, in
- * {@link RepositoryConfig} and in {@link MongoMigrationRunner}) names the
- * database it wants with an explicit bean name or {@link Qualifier}.
+ * Wires the three logical Mongo databases (scryfall card data, suggester user/deck data,
+ * spellbook combo data) that share one {@link MongoClient}, each with its own
+ * {@link MongoDatabaseFactory} and {@link MongoTemplate} selected explicitly by
+ * {@link Qualifier} rather than a single {@code @Primary} bean.
  */
 @Configuration
 public class MongoConfig {

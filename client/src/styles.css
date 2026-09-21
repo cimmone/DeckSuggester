@@ -223,3 +223,86 @@ footer { padding: 25px; border-top: 1px solid #d6d7ce; color: #919a94; text-alig
 .toast button { border: 0; background: transparent; color: inherit; font-size: 18px; line-height: 1; cursor: pointer; opacity: .8; }
 .toast button:hover { opacity: 1; }
 @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* --- Import panel extras --------------------------------------------------- */
+.import-extra-actions { display: flex; gap: 9px; margin-top: 12px; }
+.import-extra-actions .small-button { padding: 8px 12px; border: 1px solid #cdd1c9; border-radius: 8px; background: #fff; color: #174b38; font-size: 11px; font-weight: 650; cursor: pointer; }
+.import-extra-actions .small-button:hover { border-color: #39745d; }
+
+/* --- Deck row: source + signature hover ------------------------------------ */
+.deck-source, .deck-signature-hint { color: #8f5f24; font-style: normal; font-weight: 500; text-transform: capitalize; }
+.move-folder-select { border: 1px solid #d3d6ce; border-radius: 7px; padding: 6px 8px; background: #fff; color: #415048; font-size: 10px; max-width: 150px; }
+.signature-preview { position: fixed; z-index: 40; width: 220px; padding: 14px; border-radius: 14px; background: #17251f; box-shadow: 0 18px 45px rgba(20,31,26,.4); pointer-events: none; }
+.signature-preview strong { display: block; color: #f0d99f; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.signature-preview-grid { display: grid; gap: 12px; }
+.signature-preview-item { display: grid; gap: 6px; }
+.signature-preview-item img { width: 100%; border-radius: 8px; display: block; }
+.signature-preview-item .placeholder { display: grid; place-items: center; height: 140px; border: 1px dashed #4d695f; border-radius: 8px; color: #aabbb3; font-size: 11px; text-align: center; padding: 6px; }
+.signature-preview-item small { color: #cdd8d2; font-size: 11px; }
+
+/* --- Signature card section (deck editor) ---------------------------------- */
+.signature-section { margin: 6px 0 28px; padding: 24px; border: 1px solid #d8d9cf; border-radius: 16px; background: #fbfaf5; box-shadow: 0 12px 35px rgba(35,51,43,.06); }
+.signature-cards { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.signature-card { display: grid; grid-template-columns: 200px 1fr; gap: 22px; align-items: start; }
+.signature-image { position: relative; width: 200px; perspective: 1200px; }
+.signature-image img { width: 100%; border-radius: 12px; display: block; box-shadow: 0 14px 30px rgba(15,25,20,.25); }
+.signature-image.placeholder { display: grid; place-items: center; height: 280px; border: 1px dashed #c3c4ba; border-radius: 12px; color: #8b968e; font-size: 12px; text-align: center; padding: 10px; }
+.signature-face { backface-visibility: hidden; transition: transform .6s cubic-bezier(.4,.2,.2,1); transform-style: preserve-3d; }
+.signature-front { position: relative; }
+.signature-back { position: absolute; inset: 0; transform: rotateY(180deg); }
+.signature-image.flippable.flipped .signature-front { transform: rotateY(-180deg); }
+.signature-image.flippable.flipped .signature-back { transform: rotateY(0deg); }
+.flip-button { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(23,75,56,.85); color: #fff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,.25); transition: transform .3s ease; }
+.flip-button:hover { transform: rotate(180deg); background: #174b38; }
+.signature-metadata { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; align-content: start; font-size: 13px; }
+.signature-metadata div { display: contents; }
+.signature-metadata dt { color: #859087; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; align-self: center; }
+.signature-metadata dd { margin: 0; color: #33473e; }
+.signature-metadata dd strong { font-family: Georgia, serif; font-size: 18px; font-weight: 500; }
+
+/* --- Recommendations: filters + clickable add ------------------------------ */
+.recommendation-filters { border: 1px solid #e0e1d6; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
+.recommendation-filters legend { color: #859087; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 0 6px; }
+.recommendation-filters label { display: inline-flex; align-items: center; gap: 6px; margin-right: 18px; color: #43534b; font-size: 12px; cursor: pointer; }
+.recommendation-filters label.checked { color: #174b38; font-weight: 650; }
+.recommendation-filters input { accent-color: #174b38; }
+.recommendation-explanation { margin: 0 0 12px; padding: 12px 14px; border-left: 3px solid #d7af62; background: #f5f1e6; color: #55605a; font-size: 13px; line-height: 1.5; border-radius: 0 8px 8px 0; }
+.recommendation-image { border: 0; padding: 0; background: transparent; cursor: pointer; position: relative; width: 150px; flex-shrink: 0; display: block; }
+.recommendation-image img { width: 100%; border-radius: 9px; display: block; transition: transform .15s ease, box-shadow .15s ease; }
+.recommendation-image:hover img { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15,25,20,.25); }
+.recommendation-image .placeholder { display: grid; place-items: center; height: 210px; border: 1px dashed #c3c4ba; border-radius: 9px; color: #8b968e; font-size: 12px; text-align: center; padding: 8px; }
+.recommendation-image .add-overlay { width: 40px; height: 40px; font-size: 20px; }
+.recommendation-image:hover .add-overlay { background: rgba(23,75,56,.75); }
+.recommendation-image:disabled { opacity: .6; cursor: progress; }
+
+/* --- Manual decklist import dialog ---------------------------------------- */
+.manual-import-form { display: grid; gap: 16px; margin-top: 16px; }
+.manual-import-form label { display: grid; gap: 6px; color: #43534b; font-size: 12px; font-weight: 700; }
+.manual-import-form input, .manual-import-form select, .manual-import-form textarea { width: 100%; border: 1px solid #ccd1ca; border-radius: 9px; padding: 11px 13px; background: #fff; outline: none; font-family: inherit; font-size: 13px; }
+.manual-import-form textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.manual-import-form input:focus, .manual-import-form select:focus, .manual-import-form textarea:focus { border-color: #39745d; box-shadow: 0 0 0 3px #dbe8e1; }
+.manual-import-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* --- Folder manager -------------------------------------------------------- */
+.folder-manager { width: min(820px, 100%); }
+.folder-create-form { display: flex; gap: 9px; margin: 16px 0; }
+.folder-create-form input, .folder-create-form select { flex: 1; min-width: 0; border: 1px solid #ccd1ca; border-radius: 8px; padding: 10px 12px; background: #fff; font-size: 13px; }
+.folder-create-form button { flex-shrink: 0; }
+.folder-tree-scroll { max-height: 56vh; overflow: auto; border: 1px solid #e3e3da; border-radius: 10px; padding: 8px; }
+.folder-tree { list-style: none; margin: 0; padding: 0; }
+.folder-tree-node { padding: 4px 0; }
+.folder-tree-row { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 8px; }
+.folder-tree-row:hover { background: #eef2ec; }
+.folder-tree-row svg { color: #b07a31; }
+.folder-tree-row strong { color: #1d3229; }
+.folder-tree-row input { border: 1px solid #cdd1c9; border-radius: 6px; padding: 5px 8px; font-size: 13px; }
+.folder-tree-counts { display: flex; gap: 10px; margin-left: auto; }
+.folder-tree-counts em { color: #929b95; font-style: normal; font-size: 11px; }
+.folder-tree-actions { display: flex; gap: 5px; }
+.folder-tree-actions button { border: 1px solid #d3d6ce; border-radius: 6px; padding: 5px 8px; background: #fff; color: #58665f; font-size: 10px; cursor: pointer; }
+.folder-tree-actions button:hover { border-color: #39745d; color: #174b38; }
+.folder-move-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 30px; font-size: 12px; color: #43534b; }
+.folder-move-row select { border: 1px solid #ccd1ca; border-radius: 6px; padding: 5px 8px; font-size: 12px; }
+.confirm-dialog { position: relative; margin-top: 16px; padding: 18px; border: 1px solid #ddc3bc; border-radius: 12px; background: #f7ece9; }
+.confirm-dialog p { margin: 0 0 12px; color: #8f332b; font-size: 14px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 9px; }

@@ -32,7 +32,7 @@ class SecurityAndTenancyTests {
     }
 
     @Test
-    void deckIdsAndOwnershipAreIsolatedByAccountEvenWhenTheArchidektIdMatches() {
+    void deckIdsAndOwnershipAreIsolatedByAccountEvenWhenTheSourceIdMatches() {
         UserIdentity alice = new UserIdentity("account-a", "alice", "alice-library");
         UserIdentity bob = new UserIdentity("account-b", "bob", "bob-library");
 

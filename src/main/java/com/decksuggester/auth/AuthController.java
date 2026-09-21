@@ -31,26 +31,21 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContexts;
-    private final UserAccountService accountService;
+    private final UserAccountService userAccountService;
 
     public AuthController(AuthenticationManager authenticationManager,
                           SecurityContextRepository securityContexts,
-                          UserAccountService accountService) {
+                          UserAccountService userAccountService) {
         this.authenticationManager = authenticationManager;
         this.securityContexts = securityContexts;
-        this.accountService = accountService;
+        this.userAccountService = userAccountService;
     }
 
-    /**
-     * Reports the CSRF header name the client must echo back, rather than
-     * letting the client hardcode a guess: the repository's configured header
-     * name (and the fetch client's assumption about it) can drift out of sync,
-     * silently turning every POST/PUT/DELETE after login into a 403.
-     */
+    /** Echoes back the CSRF header name so the client never has to hardcode a guess. */
     @GetMapping("/session")
     public SessionResponse session(Authentication authentication, CsrfToken csrfToken) {
         if (authentication != null && authentication.isAuthenticated()
-                && authentication.getPrincipal() instanceof AccountPrincipal principal) {
+                && authentication.getPrincipal() instanceof UserPrincipal principal) {
             return new SessionResponse(true, principal.getUsername(), principal.libraryId(),
                     csrfToken.getHeaderName(), csrfToken.getToken());
         }
@@ -74,7 +69,7 @@ public class AuthController {
             context.setAuthentication(authentication);
             SecurityContextHolder.setContext(context);
             securityContexts.saveContext(context, request, response);
-            AccountPrincipal principal = (AccountPrincipal) authentication.getPrincipal();
+            UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
             return ResponseEntity.ok(new LoginResponse(principal.getUsername(),
                     principal.libraryId()));
         } catch (AuthenticationException exception) {
@@ -92,7 +87,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
-        UserAccount account = accountService.register(request.username(), request.password(),
+        UserAccount account = userAccountService.register(request.username(), request.password(),
                 request.email());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new LoginResponse(account.getUsername(), account.getLibraryId()));
@@ -100,14 +95,14 @@ public class AuthController {
 
     @PostMapping("/password-reset/request")
     public MessageResponse requestPasswordReset(@Valid @RequestBody ResetRequest request) {
-        accountService.requestPasswordReset(request.account());
+        userAccountService.requestPasswordReset(request.account());
         return new MessageResponse(
                 "If the account exists, its password reset URL was written to the application logs");
     }
 
     @PostMapping("/password-reset/confirm")
     public MessageResponse resetPassword(@Valid @RequestBody ResetConfirmation request) {
-        accountService.resetPassword(request.token(), request.password());
+        userAccountService.resetPassword(request.token(), request.password());
         return new MessageResponse("Password updated. You can now sign in");
     }
 

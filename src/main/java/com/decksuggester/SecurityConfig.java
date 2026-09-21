@@ -22,20 +22,16 @@ import static org.springframework.security.crypto.password.Pbkdf2PasswordEncoder
 @Configuration
 public class SecurityConfig {
 
-    /**
-     * Spring Security's own PBKDF2 encoder: it already salts every hash with a
-     * fresh random value per password, and this configured secret is mixed in
-     * on top as an application-level pepper.
-     */
+    /** PBKDF2 password hashing with an application-level pepper mixed into Spring Security's own salt. */
     @Bean
     public PasswordEncoder passwordEncoder(@Value("${auth.password-salt}") String applicationSalt) {
         return new Pbkdf2PasswordEncoder(applicationSalt, 16, 310_000, PBKDF2WithHmacSHA256);
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(UserAccountService accountService,
+    public AuthenticationManager authenticationManager(UserAccountService userAccountService,
                                                         PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(accountService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userAccountService);
         provider.setPasswordEncoder(passwordEncoder);
         return new ProviderManager(provider);
     }

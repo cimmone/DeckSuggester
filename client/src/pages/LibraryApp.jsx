@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppFooter } from '../components/AppFooter';
 import { DeckRow } from '../components/DeckRow';
+import { FolderManager } from '../components/FolderManager';
+import { ManualDeckImportDialog } from '../components/ManualDeckImportDialog';
 import { PieChart } from '../components/PieChart';
+import { createSecuredFetch } from '../lib/api';
 import { METRICS, deckMatchesFilters } from '../lib/filters';
 
 export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
   const [decks, setDecks] = useState([]);
   const [stats, setStats] = useState(null);
+  const [folders, setFolders] = useState([]);
   const [folderUrl, setFolderUrl] = useState('');
   const [folderFilter, setFolderFilter] = useState('all');
   const [metric, setMetric] = useState('cardColors');
@@ -14,16 +18,11 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
   const [only, setOnly] = useState(false);
   const [busy, setBusy] = useState(true);
   const [notice, setNotice] = useState(null);
+  const [showManualImport, setShowManualImport] = useState(false);
+  const [showFolderManager, setShowFolderManager] = useState(false);
 
-  const securedFetch = useCallback(async (url, options = {}) => {
-    const headers = new Headers(options.headers || {});
-    if (options.method && options.method !== 'GET') {
-      headers.set(session.csrfHeaderName, session.csrfToken);
-    }
-    const response = await fetch(url, { ...options, headers });
-    if (response.status === 401) onUnauthenticated();
-    return response;
-  }, [onUnauthenticated, session.csrfHeaderName, session.csrfToken]);
+  const securedFetch = useMemo(() => createSecuredFetch(session, onUnauthenticated),
+    [onUnauthenticated, session]);
 
   const loadData = useCallback(async () => {
     const response = await securedFetch('/library');
@@ -31,6 +30,10 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
     const library = await response.json();
     setDecks(library.decks);
     setStats(library.statistics);
+    try {
+      const folderResponse = await securedFetch('/folders');
+      if (folderResponse.ok) setFolders(await folderResponse.json());
+    } catch { /* folders are optional */ }
   }, [securedFetch]);
 
   useEffect(() => {
@@ -61,13 +64,17 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
 
   const groupedDecks = useMemo(() => {
     const groups = new Map();
+    const folderName = (id) => (folders.find((f) => f.id === id) || {}).name || "Library root";
     filteredDecks.forEach((deck) => {
-      const key = `${deck.folderId}:${deck.folderName}`;
-      if (!groups.has(key)) groups.set(key, { key, name: deck.folderName, decks: [] });
+      // Group by the user-managed folder when one is assigned, otherwise fall
+      // back to the legacy imported-folder label so existing decks stay grouped.
+      const key = deck.folderRef ? `ref:${deck.folderRef}` : `${deck.folderId}:${deck.folderName}`;
+      const name = deck.folderRef ? folderName(deck.folderRef) : (deck.folderName || "Library root");
+      if (!groups.has(key)) groups.set(key, { key, name, decks: [] });
       groups.get(key).decks.push(deck);
     });
     return [...groups.values()];
-  }, [filteredDecks]);
+  }, [filteredDecks, folders]);
 
   async function importFolder(event) {
     event.preventDefault();
@@ -99,9 +106,22 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
       setNotice({ type: 'success', text: `Deleted ${deck.name}.` });
     }
   }
+  async function moveDeckToFolder(deck, targetFolderId) {
+    const response = await securedFetch(`/decks/${encodeURIComponent(deck.id)}/folder`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderId: targetFolderId || null }),
+    });
+    if (response.ok) {
+      await loadData();
+      setNotice({ type: 'success', text: `Moved ${deck.name}.` });
+    } else {
+      setNotice({ type: 'error', text: 'Could not move the deck.' });
+    }
+  }
 
-  async function updateDeck(id, name, description) {
-    const response = await securedFetch(`/decks/${encodeURIComponent(id)}`, {
+
+  async function updateDeck(deck, name, description) {
+    const response = await securedFetch(`/decks/${encodeURIComponent(deck.id)}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, description }),
     });
@@ -137,20 +157,24 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
       <main>
         <section className="hero">
           <div>
-            <p className="eyebrow">Archidekt importer</p>
+            <p className="eyebrow">Import decks</p>
             <h1>Your collection,<br /><em>mapped.</em></h1>
-            <p>Import an Archidekt folder and all of its nested decks. Cards are matched to
-              the local Scryfall catalog automatically.</p>
+            <p>Import an Archidekt folder (every nested deck), a single Moxfield deck, or paste a raw
+              decklist. Cards are matched to the local Scryfall catalog automatically.</p>
           </div>
           <form className="import-panel" onSubmit={importFolder}>
-            <label htmlFor="folder-url">Archidekt folder URL</label>
+            <label htmlFor="folder-url">Archidekt folder or Moxfield deck URL</label>
             <div className="input-row">
               <input id="folder-url" type="url" value={folderUrl} required
-                placeholder="https://archidekt.com/folders/95630"
+                placeholder="https://archidekt.com/folders/95630  or  https://moxfield.com/decks/A63Mp5u1_UqaBpoMmJDXYg"
                 onChange={(event) => setFolderUrl(event.target.value)} />
-              <button className="primary-button" disabled={busy}>Import folder</button>
+              <button className="primary-button" disabled={busy}>Import</button>
             </div>
-            <span>Nested folders are discovered recursively. Existing decks are refreshed.</span>
+            <span>Nested Archidekt folders are discovered recursively. Existing decks are refreshed.</span>
+            <div className="import-extra-actions">
+              <button type="button" className="small-button" onClick={() => setShowManualImport(true)}>Paste a decklist</button>
+              <button type="button" className="small-button" onClick={() => setShowFolderManager(true)}>Manage folders</button>
+            </div>
           </form>
         </section>
 
@@ -232,11 +256,21 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
                 <div className="folder-label"><span>⌄</span><strong>{group.name}</strong>
                   <small>{group.decks.length} decks</small></div>
                 {group.decks.map((deck) => <DeckRow key={deck.id} deck={deck}
-                  onDelete={deleteDeck} onUpdate={updateDeck} />)}
+                  folders={folders} onDelete={deleteDeck} onUpdate={updateDeck}
+                  onMoveToFolder={moveDeckToFolder} />)}
+
               </div>
             ))}
         </section>
       </main>
+      {showManualImport && (
+        <ManualDeckImportDialog session={session} securedFetch={securedFetch}
+          folders={folders} onClose={() => setShowManualImport(false)} />
+      )}
+      {showFolderManager && (
+        <FolderManager securedFetch={securedFetch} folders={folders} decks={decks}
+          onChange={loadData} onClose={() => setShowFolderManager(false)} />
+      )}
       <AppFooter />
     </div>
   );

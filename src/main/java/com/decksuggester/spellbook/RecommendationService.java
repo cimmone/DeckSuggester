@@ -17,20 +17,12 @@ import java.util.Set;
 
 /**
  * Ranks Commander Spellbook combos by how well they fit a specific deck and
- * surfaces the best combo pieces the deck does not yet own.
- *
- * <p>Fitness is scored (lower is better) from five weighted signals:</p>
- * <ol>
- *   <li>The ratio of new pieces required to total pieces &mdash; the fewer new
- *       cards required, the better.</li>
- *   <li>Colour-identity alignment with the deck's commander &mdash; pieces
- *       outside the identity are penalised.</li>
- *   <li>Total mana value of the combo &mdash; cheaper is better.</li>
- *   <li>Card types &mdash; Creatures are more fragile than
- *       Artifact/Land/Enchantment/Instant/Sorcery pieces, so creature-heavy
- *       combos are penalised.</li>
- *   <li>Monetary cost of the combo &mdash; cheaper is better.</li>
- * </ol>
+ * surfaces the best combo pieces the deck does not yet own: {@link ComboRepository#findCandidates}
+ * prefilters a capped candidate set on the Mongo side by colour identity and
+ * combo-level format legality, then this service scores each candidate in
+ * memory (per-card Scryfall legality, ownership, fitness) and sorts by
+ * fitness, with {@link FilterMode} selecting whether owned, partially-owned,
+ * or all legal combos are returned.
  */
 @Service
 public class RecommendationService {
@@ -43,6 +35,9 @@ public class RecommendationService {
     private static final double MANA_WEIGHT = 2.0;
     private static final double TYPE_WEIGHT = 8.0;
     private static final double PRICE_WEIGHT = 0.5;
+
+    /** Maximum number of combo candidates pulled from Mongo per request. */
+    private static final int CANDIDATE_CAP = 400;
 
     // Full colour names (as stored on decks) mapped to their WUBRG letter, so a
     // deck identity can be compared against a combo's compact identity string.
@@ -58,6 +53,10 @@ public class RecommendationService {
     }
 
     public List<Recommendation> recommend(Deck deck, int limit) {
+        return recommend(deck, limit, FilterMode.LEGAL, "commander");
+    }
+
+    public List<Recommendation> recommend(Deck deck, int limit, FilterMode filter, String format) {
         Set<String> ownedOracleIds = new HashSet<>();
         Set<String> ownedNames = new HashSet<>();
         for (DeckCard card : deck.getCards()) {
@@ -71,19 +70,52 @@ public class RecommendationService {
                 ownedNames.add(normalize(card.name()));
             }
         }
-        Set<String> identity = deckIdentityLetters(deck);
-
-        List<Combo> combos = comboRepository.findAll();
-        Map<String, Card> cardsByOracleId = loadScryfallCards(combos);
-
-        List<Recommendation> scored = new ArrayList<>();
-        for (Combo combo : combos) {
-            Recommendation recommendation = score(combo, ownedOracleIds, ownedNames,
-                    identity, cardsByOracleId);
-            if (recommendation != null) {
-                scored.add(recommendation);
+        // Signature cards count as "owned" for combo matching too, so a combo
+        // built around the commander is recognised as partially assembled.
+        for (DeckCard card : deck.getSignatureCards()) {
+            if (card.oracleId() != null) {
+                ownedOracleIds.add(card.oracleId());
+            }
+            if (card.name() != null) {
+                ownedNames.add(normalize(card.name()));
             }
         }
+        Set<String> identity = deckIdentityLetters(deck);
+        String identityRegex = identityRegex(identity);
+        String requestedFormat = normalizeFormat(format);
+        FilterMode mode = filter == null ? FilterMode.LEGAL : filter;
+
+        // Mongo-side: filter by colour identity + combo-level format legality.
+        // For OWNED/PARTIAL, further restrict to combos touching a card the
+        // deck owns and return every match uncapped, since that set is
+        // inherently small; a candidate cap only applies to the general LEGAL
+        // browse, where it is a coarse prefilter to keep the set small and is
+        // not the final fitness order.
+        List<Combo> candidates = mode == FilterMode.LEGAL
+                ? comboRepository.findCandidates(identityRegex, requestedFormat, CANDIDATE_CAP)
+                : comboRepository.findCandidatesForOwnedCards(identityRegex, requestedFormat,
+                        ownedOracleIds);
+        Map<String, Card> cardsByOracleId = loadScryfallCards(candidates);
+
+        List<Recommendation> scored = new ArrayList<>();
+        for (Combo combo : candidates) {
+            Recommendation recommendation = score(combo, ownedOracleIds, ownedNames,
+                    identity, cardsByOracleId, requestedFormat);
+            if (recommendation == null) {
+                continue;
+            }
+            if (mode == FilterMode.OWNED && recommendation.ownedPieces()
+                    != recommendation.requiredPieces()) {
+                continue;
+            }
+            if (mode == FilterMode.PARTIAL && recommendation.ownedPieces() <= 0) {
+                continue;
+            }
+            scored.add(recommendation);
+        }
+        // The fitness score computed above (which Mongo cannot compute, since
+        // it needs per-card Scryfall data and this deck's ownership) is the
+        // sort key for what the caller sees.
         scored.sort(Comparator.comparingDouble(Recommendation::fitness));
         return scored.subList(0, Math.min(limit, scored.size()));
     }
@@ -106,11 +138,13 @@ public class RecommendationService {
     }
 
     Recommendation score(Combo combo, Set<String> ownedOracleIds, Set<String> ownedNames,
-                         Set<String> identity, Map<String, Card> cardsByOracleId) {
+                         Set<String> identity, Map<String, Card> cardsByOracleId,
+                         String format) {
         List<Combo.ComboCard> pieces = combo.getCards();
         if (pieces.isEmpty()) {
             return null;
         }
+        String requestedFormat = normalizeFormat(format);
         int owned = 0;
         double totalMana = 0.0;
         int creatureCount = 0;
@@ -119,13 +153,17 @@ public class RecommendationService {
 
         for (Combo.ComboCard piece : pieces) {
             Card scryfall = piece.oracleId() == null ? null : cardsByOracleId.get(piece.oracleId());
-            String typeLine = piece.typeLine() != null ? piece.typeLine()
-                    : (scryfall == null ? null : scryfall.getTypeLine());
-            double manaValue = scryfall != null && scryfall.getCmc() != null
-                    ? scryfall.getCmc() : 0.0;
-            List<String> pieceIdentity = scryfall == null ? List.of()
-                    : scryfall.getColorIdentity();
-
+            // Format legality is determined per card from the Scryfall legality
+            // metadata; a combo whose pieces are not legal in the deck's format
+            // is ineligible, regardless of colour identity. A piece that does
+            // not resolve to a local Scryfall card has no legality signal at
+            // all, so it is treated as ineligible rather than silently passed.
+            if (scryfall == null || !scryfall.isLegal(requestedFormat)) {
+                return null;
+            }
+            String typeLine = piece.typeLine() != null ? piece.typeLine() : scryfall.getTypeLine();
+            double manaValue = scryfall.getCmc() != null ? scryfall.getCmc() : 0.0;
+            List<String> pieceIdentity = scryfall.getColorIdentity();
             boolean isOwned = (piece.oracleId() != null && ownedOracleIds.contains(piece.oracleId()))
                     || (piece.name() != null && ownedNames.contains(normalize(piece.name())));
             if (isOwned) {
@@ -140,7 +178,7 @@ public class RecommendationService {
             }
             if (!isOwned) {
                 String imageUrl = piece.imageUrl() != null ? piece.imageUrl()
-                        : (scryfall == null ? null : scryfall.getImageUrl());
+                        : scryfall.getImageUrl();
                 missing.add(new RecommendedCard(piece.scryfallId(), piece.name(),
                         imageUrl, typeLine, manaValue, pieceExplanation(typeLine)));
             }
@@ -220,6 +258,23 @@ public class RecommendationService {
         return letters;
     }
 
+    /** Anchored regex matching combo identities that are a subset of the deck's identity (colourless combos, stored as {@code "C"}, always match). */
+    public static String identityRegex(Set<String> identity) {
+        if (identity.isEmpty()) {
+            return "^C$";
+        }
+        String letters = identity.stream().sorted().reduce("", String::concat);
+        return "^([" + letters + "]*|C)$";
+    }
+
+    private static String normalizeFormat(String format) {
+        // Lowercased so it agrees with both the Mongo-side legality field name
+        // (legalities.<format>, itself lowercase) and Card#isLegal, which does
+        // an exact-case lookup against Scryfall's lowercase legality keys.
+        return format == null || format.isBlank() ? "commander"
+                : format.trim().toLowerCase(Locale.ROOT);
+    }
+
     private static boolean isCreature(String typeLine) {
         return typeLine != null && typeLine.toLowerCase(Locale.ROOT).contains("creature");
     }
@@ -233,6 +288,27 @@ public class RecommendationService {
             return Long.toString((long) value);
         }
         return Double.toString(value);
+    }
+
+    /** Ownership-based filter for the recommendations radio button. */
+    public enum FilterMode {
+        /** Combos that are already fully assembled in the deck. */
+        OWNED,
+        /** Combos with at least one piece already in the deck (incl. fully owned). */
+        PARTIAL,
+        /** Every combo legal for the deck (incl. fully owned or partially owned). */
+        LEGAL;
+
+        public static FilterMode fromQuery(String value) {
+            if (value == null || value.isBlank()) {
+                return LEGAL;
+            }
+            return switch (value.toLowerCase(Locale.ROOT)) {
+                case "owned", "in-deck" -> OWNED;
+                case "partial", "partially" -> PARTIAL;
+                default -> LEGAL;
+            };
+        }
     }
 
     public record RecommendedCard(String scryfallId, String name, String imageUrl,

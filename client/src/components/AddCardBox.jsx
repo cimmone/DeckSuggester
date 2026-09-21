@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-export function AddCardBox({ securedFetch, onAdd }) {
+export function AddCardBox({ securedFetch, onAddCard }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
@@ -39,7 +39,7 @@ export function AddCardBox({ securedFetch, onAdd }) {
 
   async function addSuggestion(card) {
     if (!card) return;
-    await onAdd(card.name);
+    await onAddCard(card.name);
     setQuery('');
     setSuggestions([]);
     setOpen(false);

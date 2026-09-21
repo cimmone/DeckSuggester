@@ -39,6 +39,12 @@ public class Card {
     @Field("released_at")
     private String releasedAt;
 
+    /** Scryfall layout string (e.g. {@code "transform"}, {@code "flip"}). */
+    private String layout;
+
+    /** Per-format legality strings keyed by format slug. */
+    private Map<String, String> legalities;
+
     @Field("image_uris")
     private Map<String, String> imageUris;
 
@@ -49,7 +55,7 @@ public class Card {
         return mongoId;
     }
 
-    public String getId() {
+    public String getScryfallId() {
         return scryfallId;
     }
 
@@ -89,6 +95,20 @@ public class Card {
         return releasedAt;
     }
 
+    public String getLayout() {
+        return layout;
+    }
+
+    public Map<String, String> getLegalities() {
+        return legalities == null ? Collections.emptyMap() : legalities;
+    }
+
+    /** {@code true} when the card is legal in the given format. */
+    public boolean isLegal(String format) {
+        String value = getLegalities().get(format);
+        return "legal".equalsIgnoreCase(value);
+    }
+
     public String getImageUrl() {
         if (imageUris != null && imageUris.get("normal") != null) {
             return imageUris.get("normal");
@@ -102,6 +122,20 @@ public class Card {
                     .orElse(null);
         }
         return null;
+    }
+
+    /** Back-face image URL for double-faced cards, or {@code null} otherwise. */
+    public String getBackImageUrl() {
+        if (cardFaces == null || cardFaces.size() < 2) {
+            return null;
+        }
+        return cardFaces.stream()
+                .skip(1)
+                .map(CardFace::imageUris)
+                .filter(images -> images != null && images.get("normal") != null)
+                .map(images -> images.get("normal"))
+                .findFirst()
+                .orElse(null);
     }
 
     public record CardFace(@Field("image_uris") Map<String, String> imageUris) {

@@ -22,9 +22,6 @@ import java.util.regex.Pattern;
 @Service
 public class DeckEditService {
 
-    private static final Map<String, String> COLOR_NAMES = Map.of(
-            "W", "White", "U", "Blue", "B", "Black", "R", "Red", "G", "Green");
-
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
     private final DeckHistoryService historyService;
@@ -51,7 +48,7 @@ public class DeckEditService {
         Map<String, CardSuggestion> byName = new LinkedHashMap<>();
         for (var card : cardRepository.searchByName(regex, PageRequest.of(0, 60))) {
             byName.putIfAbsent(normalizeName(card.getName()),
-                    new CardSuggestion(card.getId(), card.getName(),
+                    new CardSuggestion(card.getScryfallId(), card.getName(),
                             card.getTypeLine(), card.getImageUrl()));
             if (byName.size() >= 10) {
                 break;
@@ -96,13 +93,14 @@ public class DeckEditService {
             recordedName = existing.name();
             scryfallId = existing.scryfallId();
         } else if (card != null) {
-            cards.add(new DeckCard(card.getId(), card.getOracleId(), card.getName(),
+            cards.add(new DeckCard(card.getScryfallId(), card.getOracleId(), card.getName(),
                     card.getCmc() == null ? 0.0 : card.getCmc(),
                     normalizeColors(card.getColors()), normalizeColors(card.getColorIdentity()),
                     card.getTypeLine(), card.getImageUrl(), 1, List.of(), true, true,
-                    card.getPower(), card.getToughness(), card.getReleasedAt()));
+                    card.getPower(), card.getToughness(), card.getReleasedAt(),
+                    card.getBackImageUrl(), card.getLayout()));
             recordedName = card.getName();
-            scryfallId = card.getId();
+            scryfallId = card.getScryfallId();
         } else {
             // Only real Scryfall cards can be added. Refusing arbitrary text
             // here means the deck never accumulates cards without metadata.
@@ -148,8 +146,8 @@ public class DeckEditService {
     private static int indexOfIncluded(List<DeckCard> cards, Card card, String name) {
         for (int i = 0; i < cards.size(); i++) {
             DeckCard current = cards.get(i);
-            boolean matches = card != null && card.getId() != null
-                    && card.getId().equals(current.scryfallId());
+            boolean matches = card != null && card.getScryfallId() != null
+                    && card.getScryfallId().equals(current.scryfallId());
             if (!matches && name != null) {
                 matches = name.trim().equalsIgnoreCase(current.name());
             }
@@ -174,12 +172,14 @@ public class DeckEditService {
     private static DeckCard withQuantity(DeckCard card, int quantity, boolean included) {
         return new DeckCard(card.scryfallId(), card.oracleId(), card.name(), card.manaValue(),
                 card.colors(), card.colorIdentity(), card.typeLine(), card.imageUrl(),
-                quantity, card.categories(), included, card.matchedScryfallCard());
+                quantity, card.categories(), included, card.matchedScryfallCard(),
+                card.power(), card.toughness(), card.releasedAt(), card.backImageUrl(),
+                card.layout());
     }
 
     private static List<String> normalizeColors(List<String> colors) {
         return colors.stream()
-                .map(color -> COLOR_NAMES.getOrDefault(color, color))
+                .map(color -> CardColors.NAMES.getOrDefault(color, color))
                 .toList();
     }
 

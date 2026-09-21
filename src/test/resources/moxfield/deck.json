@@ -1,0 +1,133 @@
+{
+  "name": "Dwalin",
+  "description": "hobbit",
+  "publicUrl": "https://moxfield.com/decks/dZySsdmucEqqBUfQpDn_ag",
+  "publicId": "A63Mp5u1_UqaBpoMmJDXYg",
+  "boards": {
+    "commanders": {
+      "count": 1,
+      "cards": {
+        "kX8zV": {
+          "quantity": 1,
+          "boardType": "commanders",
+          "card": {
+            "scryfall_id": "cmd-1",
+            "oracleId": "cmd-1-oracle",
+            "name": "Dwalin, Weaponmaster",
+            "cmc": 2,
+            "type_line": "Legendary Creature — Dwarf Warrior",
+            "colors": ["R", "W"],
+            "color_identity": ["R", "W"],
+            "power": "2",
+            "toughness": "1",
+            "released_at": "2026-08-14",
+            "layout": "normal"
+          }
+        }
+      }
+    },
+    "signatureSpells": {
+      "count": 0,
+      "cards": {}
+    },
+    "mainboard": {
+      "count": 3,
+      "cards": {
+        "a1": {
+          "quantity": 1,
+          "boardType": "mainboard",
+          "card": {
+            "scryfall_id": "main-1",
+            "oracleId": "main-1-oracle",
+            "name": "Mountain",
+            "cmc": 0,
+            "type_line": "Basic Land — Mountain",
+            "colors": [],
+            "color_identity": ["R"],
+            "layout": "normal"
+          }
+        },
+        "a2": {
+          "quantity": 1,
+          "boardType": "mainboard",
+          "card": {
+            "scryfall_id": "main-2",
+            "oracleId": "main-2-oracle",
+            "name": "Plains",
+            "cmc": 0,
+            "type_line": "Basic Land — Plains",
+            "colors": [],
+            "color_identity": ["W"],
+            "layout": "normal"
+          }
+        },
+        "a3": {
+          "quantity": 1,
+          "boardType": "mainboard",
+          "card": {
+            "scryfall_id": "main-3",
+            "oracleId": "main-3-oracle",
+            "name": "Sol Ring",
+            "cmc": 1,
+            "type_line": "Artifact",
+            "colors": [],
+            "color_identity": [],
+            "layout": "normal"
+          }
+        }
+      }
+    },
+    "maybeboard": {
+      "count": 2,
+      "cards": {
+        "b1": {
+          "quantity": 1,
+          "boardType": "maybeboard",
+          "card": {
+            "scryfall_id": "maybe-1",
+            "oracleId": "maybe-1-oracle",
+            "name": "Lightning Bolt",
+            "cmc": 1,
+            "type_line": "Instant",
+            "colors": ["R"],
+            "color_identity": ["R"],
+            "layout": "normal"
+          }
+        },
+        "b2": {
+          "quantity": 1,
+          "boardType": "maybeboard",
+          "card": {
+            "scryfall_id": "maybe-2",
+            "oracleId": "maybe-2-oracle",
+            "name": "Swords to Plowshares",
+            "cmc": 1,
+            "type_line": "Instant",
+            "colors": ["W"],
+            "color_identity": ["W"],
+            "layout": "normal"
+          }
+        }
+      }
+    },
+    "sideboard": {
+      "count": 1,
+      "cards": {
+        "c1": {
+          "quantity": 1,
+          "boardType": "sideboard",
+          "card": {
+            "scryfall_id": "side-1",
+            "oracleId": "side-1-oracle",
+            "name": "Path to Exile",
+            "cmc": 1,
+            "type_line": "Instant",
+            "colors": ["W"],
+            "color_identity": ["W"],
+            "layout": "normal"
+          }
+        }
+      }
+    }
+  }
+}

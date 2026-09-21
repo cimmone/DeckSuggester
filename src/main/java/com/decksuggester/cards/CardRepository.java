@@ -18,12 +18,11 @@ public interface CardRepository extends MongoRepository<Card, String> {
 
     Optional<Card> findFirstByNameIgnoreCase(String name);
 
-    /**
-     * Case-insensitive substring search over card names, used to populate the
-     * "add card" autocomplete. The supplied {@code nameRegex} is a
-     * pre-built (already escaped) regular expression; the caller supplies a
-     * Pageable so the number of suggestions can be capped.
-     */
+    /** Case-insensitive batch lookup by exact name, for resolving a pasted decklist in one round trip. */
+    @Query(value = "{ 'name': { $in: ?0 } }", collation = "{ locale: 'en', strength: 2 }")
+    List<Card> findByNameInIgnoreCase(Collection<String> names);
+
+    /** Case-insensitive substring search over card names, for the "add card" autocomplete. */
     @Query("{ 'name': { $regex: ?0, $options: 'i' } }")
     List<Card> searchByName(String nameRegex, Pageable pageable);
 }

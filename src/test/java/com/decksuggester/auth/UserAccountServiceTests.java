@@ -37,6 +37,6 @@ class UserAccountServiceTests {
 
         assertThatThrownBy(() -> service.register("taken", "a very long password",
                 "player@example.com"))
-                .isInstanceOf(AccountConflictException.class);
+                .isInstanceOf(UsernameAlreadyTakenException.class);
     }
 }

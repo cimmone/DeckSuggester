@@ -25,8 +25,10 @@ public class CardController {
     }
 
     @GetMapping("/cards/{scryfallId}/image")
-    public ResponseEntity<byte[]> image(@PathVariable String scryfallId) {
-        ScryfallImageService.ProxiedImage image = imageService.fetch(scryfallId);
+    public ResponseEntity<byte[]> image(@PathVariable String scryfallId,
+            @org.springframework.web.bind.annotation.RequestParam(
+                    value = "face", required = false) String face) {
+        ScryfallImageService.ProxiedImage image = imageService.fetch(scryfallId, face);
         return ResponseEntity.ok()
                 .contentType(image.contentType())
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(7)).cachePrivate())

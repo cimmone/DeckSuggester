@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddCardBox } from '../components/AddCardBox';
 import { AppFooter } from '../components/AppFooter';
 import { CardTable } from '../components/CardTable';
 import { DeckHistoryPanel } from '../components/DeckHistoryPanel';
 import { RecommendationsDialog } from '../components/RecommendationsDialog';
+import { SignatureCard } from '../components/SignatureCard';
 import { Toasts } from '../components/Toasts';
+import { createSecuredFetch } from '../lib/api';
 import { navigate } from '../lib/router';
 
 export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
@@ -27,15 +29,8 @@ export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
     setTimeout(() => dismissToast(id), 6000);
   }, [dismissToast]);
 
-  const securedFetch = useCallback(async (url, options = {}) => {
-    const headers = new Headers(options.headers || {});
-    if (options.method && options.method !== 'GET') {
-      headers.set(session.csrfHeaderName, session.csrfToken);
-    }
-    const response = await fetch(url, { ...options, headers });
-    if (response.status === 401) onUnauthenticated();
-    return response;
-  }, [onUnauthenticated, session.csrfHeaderName, session.csrfToken]);
+  const securedFetch = useMemo(() => createSecuredFetch(session, onUnauthenticated),
+    [onUnauthenticated, session]);
 
   const loadDeck = useCallback(async () => {
     const response = await securedFetch(`/decks/${encodeURIComponent(deckId)}`);
@@ -95,10 +90,12 @@ export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
     }
   }, [mutateDeck, pushToast]);
 
+  const signatureCards = deck?.signatureCards || [];
   const cardCount = (deck?.cards || [])
     .filter((card) => card.includedInDeck !== false)
-    .reduce((total, card) => total + card.quantity, 0);
-
+    .reduce((total, card) => total + card.quantity, 0)
+    + signatureCards.filter((c) => c.includedInDeck !== false)
+      .reduce((total, c) => total + c.quantity, 0);
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -134,9 +131,20 @@ export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
               </div>
             </section>
 
+            {signatureCards.length > 0 && (
+              <section className="signature-section">
+                <div className="library-heading">
+                  <div><p className="eyebrow">Commander</p><h2>Signature cards</h2></div>
+                </div>
+                <div className="signature-cards">
+                  {signatureCards.map((card) => <SignatureCard key={card.scryfallId || card.name} card={card} />)}
+                </div>
+              </section>
+            )}
+
             <section className="editor-add">
               <p className="eyebrow">Add cards</p>
-              <AddCardBox securedFetch={securedFetch} onAdd={addCard} />
+              <AddCardBox securedFetch={securedFetch} onAddCard={addCard} />
             </section>
 
             <section className="library-section">
@@ -145,7 +153,7 @@ export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
               </div>
               <div className="card-list editor-card-list">
                 <CardTable cards={deck.cards || []} editable
-                  onAdd={(card) => addCard(card.name)} onRemove={removeCard} />
+                  onAddCard={addCard} onRemove={removeCard} />
               </div>
             </section>
           </>
@@ -154,7 +162,7 @@ export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
 
       {showRecommendations && deck && (
         <RecommendationsDialog deck={deck} securedFetch={securedFetch}
-          onClose={() => setShowRecommendations(false)} />
+          onAddCard={addCard} onClose={() => setShowRecommendations(false)} />
       )}
       {showHistory && (
         <DeckHistoryPanel securedFetch={securedFetch} refreshKey={historyKey}
