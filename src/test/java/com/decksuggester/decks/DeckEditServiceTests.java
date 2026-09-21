@@ -36,7 +36,7 @@ class DeckEditServiceTests {
     @Test
     void addingAnExistingCardIncrementsItsQuantityAndRecordsHistory() {
         DeckCard existing = new DeckCard("s1", "o1", "Sol Ring", 1.0, List.of(), List.of(),
-                "Artifact", null, 1, List.of(), true, true);
+                "Artifact", null, 1, List.of(), true, true, null, null, null, null, null);
         Deck deck = deck(existing);
         when(deckRepository.findByIdAndOwnerIdAndLibraryId(deck.getId(), "alice", "alice-lib"))
                 .thenReturn(Optional.of(deck));
@@ -54,7 +54,7 @@ class DeckEditServiceTests {
     @Test
     void removingTheLastCopyDropsTheCard() {
         DeckCard existing = new DeckCard("s1", "o1", "Sol Ring", 1.0, List.of(), List.of(),
-                "Artifact", null, 1, List.of(), true, true);
+                "Artifact", null, 1, List.of(), true, true, null, null, null, null, null);
         Deck deck = deck(existing);
         when(deckRepository.findByIdAndOwnerIdAndLibraryId(deck.getId(), "alice", "alice-lib"))
                 .thenReturn(Optional.of(deck));

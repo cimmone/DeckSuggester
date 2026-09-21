@@ -1,5 +1,6 @@
 package com.decksuggester;
 
+import com.decksuggester.migrations.CardIndexTarget;
 import com.decksuggester.migrations.SpellbookIndexTarget;
 import io.flamingock.community.Flamingock;
 import io.flamingock.store.mongodb.sync.MongoDBSyncAuditStore;
@@ -19,13 +20,16 @@ public class MongoMigrationRunner {
     private static final Logger log = LoggerFactory.getLogger(MongoMigrationRunner.class);
 
     private final MongoTemplate mongoTemplate;
+    private final MongoTemplate scryfallMongoTemplate;
     private final MongoTemplate spellbookMongoTemplate;
     private final boolean enabled;
 
     public MongoMigrationRunner(@Qualifier("suggesterMongoTemplate") MongoTemplate mongoTemplate,
+                                @Qualifier("scryfallMongoTemplate") MongoTemplate scryfallMongoTemplate,
                                 @Qualifier("spellbookMongoTemplate") MongoTemplate spellbookMongoTemplate,
                                 @Value("${app.migrations.enabled:true}") boolean enabled) {
         this.mongoTemplate = mongoTemplate;
+        this.scryfallMongoTemplate = scryfallMongoTemplate;
         this.spellbookMongoTemplate = spellbookMongoTemplate;
         this.enabled = enabled;
     }
@@ -51,9 +55,11 @@ public class MongoMigrationRunner {
                     .setAuditStore(auditStore)
                     .addTargetSystem(target)
                     .addDependency(MongoTemplate.class, mongoTemplate)
-                    // The spellbook template (combo variants collection) is handed
-                    // to changes through a wrapper type so it does not clash with
-                    // the suggester template already registered under MongoTemplate.
+                    // The scryfall and spellbook templates are handed to changes
+                    // through wrapper types so they don't clash with the suggester
+                    // template already registered under MongoTemplate.
+                    .addDependency(CardIndexTarget.class,
+                            new CardIndexTarget(scryfallMongoTemplate))
                     .addDependency(SpellbookIndexTarget.class,
                             new SpellbookIndexTarget(spellbookMongoTemplate))
                     .setServiceIdentifier("deck-suggester")

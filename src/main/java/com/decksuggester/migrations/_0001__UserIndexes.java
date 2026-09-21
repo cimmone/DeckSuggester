@@ -9,6 +9,7 @@ import io.flamingock.api.annotations.TargetSystem;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
+/** Unique lookup indexes for the users collection, plus a sparse index for password-reset tokens. */
 @Change(id = "V001-user-lookup-indexes", author = "deck-suggester", transactional = false)
 @TargetSystem(id = "mongodb")
 @Recovery(strategy = RecoveryStrategy.ALWAYS_RETRY)

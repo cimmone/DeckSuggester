@@ -1,6 +1,6 @@
 package com.decksuggester.decks;
 
-/** Identifies the origin of a deck; older decks predate this field and deserialize as {@link #ARCHIDEKT}. */
+/** Identifies the origin of a deck. */
 public enum DeckSource {
 
     /** Imported from an Archidekt folder URL. */

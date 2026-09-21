@@ -13,13 +13,13 @@ class DeckStatisticsServiceTests {
     void calculatesQuantityAwareStatisticsAndSkipsMaybeboard() {
         DeckCard redCreatures = new DeckCard("one", "oracle-one", "Red creature", 5,
                 List.of("Red"), List.of("Red"), "Legendary Creature — Wizard",
-                null, 2, List.of("Main"), true, true);
+                null, 2, List.of("Main"), true, true, null, null, null, null, null);
         DeckCard colorlessArtifact = new DeckCard("two", "oracle-two", "Rock", 2,
                 List.of(), List.of(), "Artifact", null, 1,
-                List.of("Main"), true, true);
+                List.of("Main"), true, true, null, null, null, null, null);
         DeckCard maybeboard = new DeckCard("three", "oracle-three", "Maybe", 9,
                 List.of("Blue"), List.of("Blue"), "Instant", null, 10,
-                List.of("Maybeboard"), false, true);
+                List.of("Maybeboard"), false, true, null, null, null, null, null);
         Deck deck = new Deck(1, "Test", "", "https://archidekt.com/decks/1/test",
                 10, "Root", 10, "Root", Instant.EPOCH,
                 List.of(redCreatures, colorlessArtifact, maybeboard));

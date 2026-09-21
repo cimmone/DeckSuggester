@@ -192,7 +192,8 @@ public class DeckImportService {
                 cards.add(deckCardFromCard(card, raw.quantity, List.of("Mainboard"), true));
             } else {
                 cards.add(new DeckCard(null, null, raw.name, 0, List.of(), List.of(),
-                        null, null, raw.quantity, List.of("Mainboard"), true, false));
+                        null, null, raw.quantity, List.of("Mainboard"), true, false,
+                        null, null, null, null, null));
             }
         }
 
@@ -390,7 +391,7 @@ public class DeckImportService {
             return new DeckCard(raw.scryfallId(), raw.oracleId(), raw.name(),
                     raw.manaValue(), raw.colors(), raw.colorIdentity(), raw.typeLine(),
                     null, raw.quantity(), raw.categories(), raw.includedInDeck(), false,
-                    raw.power(), raw.toughness(), raw.releasedAt());
+                    raw.power(), raw.toughness(), raw.releasedAt(), null, null);
         }
         return deckCardFromCard(card, raw.quantity(), raw.categories(), raw.includedInDeck());
     }

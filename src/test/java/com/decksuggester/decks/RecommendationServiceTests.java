@@ -78,7 +78,7 @@ class RecommendationServiceTests {
     @Test
     void prefersCombosThatShareMorePiecesAndCheaperNonCreatureCards() throws Exception {
         DeckCard owned = new DeckCard("s1", "oracle-1", "Owned Card", 2.0, List.of("Blue"),
-                List.of("Blue"), "Instant", null, 1, List.of(), true, true);
+                List.of("Blue"), "Instant", null, 1, List.of(), true, true, null, null, null, null, null);
         Deck deck = new Deck(1L, "Deck", null, "url", 1L, "root", 1L, "folder",
                 java.time.Instant.now(), List.of(owned));
 
@@ -138,7 +138,7 @@ class RecommendationServiceTests {
     @Test
     void ownedFilterReturnsOnlyFullyAssembledCombos() throws Exception {
         DeckCard owned = new DeckCard("s1", "oracle-1", "Owned Card", 2.0, List.of("Blue"),
-                List.of("Blue"), "Instant", null, 1, List.of(), true, true);
+                List.of("Blue"), "Instant", null, 1, List.of(), true, true, null, null, null, null, null);
         Deck deck = new Deck(1L, "Deck", null, "url", 1L, "root", 1L, "folder",
                 java.time.Instant.now(), List.of(owned));
 
@@ -170,7 +170,7 @@ class RecommendationServiceTests {
     @Test
     void partialFilterIsNotLimitedByTheGeneralCandidateCap() throws Exception {
         DeckCard owned = new DeckCard("s1", "oracle-1", "Owned Card", 2.0, List.of("Blue"),
-                List.of("Blue"), "Instant", null, 1, List.of(), true, true);
+                List.of("Blue"), "Instant", null, 1, List.of(), true, true, null, null, null, null, null);
         Deck deck = new Deck(1L, "Deck", null, "url", 1L, "root", 1L, "folder",
                 java.time.Instant.now(), List.of(owned));
 

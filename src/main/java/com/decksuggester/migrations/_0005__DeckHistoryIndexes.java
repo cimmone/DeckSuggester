@@ -9,6 +9,7 @@ import io.flamingock.api.annotations.TargetSystem;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
+/** Rolling-window scan and per-tenant lookup indexes for the deckHistory collection. */
 @Change(id = "V005-deck-history-indexes", author = "deck-suggester", transactional = false)
 @TargetSystem(id = "mongodb")
 @Recovery(strategy = RecoveryStrategy.ALWAYS_RETRY)

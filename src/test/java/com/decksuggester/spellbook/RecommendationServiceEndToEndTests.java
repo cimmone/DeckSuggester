@@ -77,7 +77,7 @@ class RecommendationServiceEndToEndTests {
 
         DeckCard commander = new DeckCard("cmd", "oracle-cmd", "Commander", 4.0,
                 List.of("Blue"), List.of("Blue"), "Legendary Creature", null, 1,
-                List.of("Commander"), true, true);
+                List.of("Commander"), true, true, null, null, null, null, null);
         Deck deck = new Deck(new com.decksuggester.auth.UserIdentity("rec-owner", "rec-owner",
                 "rec-library"), 1L, "Blue Deck", null, null, 0L, "root", 0L, "folder",
                 Instant.now(), List.of(), DeckSource.MANUAL, List.of(commander), null);

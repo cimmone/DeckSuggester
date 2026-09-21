@@ -30,7 +30,7 @@ public class Deck {
     private List<String> colorIdentity;
     private List<DeckCard> cards;
 
-    /** Origin of the deck; {@code null} on older decks deserializes as Archidekt. */
+    /** Origin of the deck. */
     private DeckSource source;
 
     /** The signature card(s)/commander(s) the deck is built around. */
@@ -145,9 +145,7 @@ public class Deck {
     }
 
     public DeckSource getSource() {
-        // Older imported documents predate this field; deserialize as null and
-        // are treated as Archidekt imports for backwards compatibility.
-        return source == null ? DeckSource.ARCHIDEKT : source;
+        return source;
     }
 
     public void setSource(DeckSource source) {
@@ -172,9 +170,7 @@ public class Deck {
     }
 
     public List<String> getColorIdentity() {
-        // Older imported documents predate this field. Derive a safe fallback
-        // so they are not incorrectly presented as colorless after upgrade.
-        return colorIdentity == null ? computeColorIdentity(getCards()) : colorIdentity;
+        return colorIdentity;
     }
 
     public List<DeckCard> getCards() {

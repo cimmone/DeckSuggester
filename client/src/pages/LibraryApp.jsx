@@ -67,7 +67,7 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
     const folderName = (id) => (folders.find((f) => f.id === id) || {}).name || "Library root";
     filteredDecks.forEach((deck) => {
       // Group by the user-managed folder when one is assigned, otherwise fall
-      // back to the legacy imported-folder label so existing decks stay grouped.
+      // back to the deck's Archidekt-imported folder label.
       const key = deck.folderRef ? `ref:${deck.folderRef}` : `${deck.folderId}:${deck.folderName}`;
       const name = deck.folderRef ? folderName(deck.folderRef) : (deck.folderName || "Library root");
       if (!groups.has(key)) groups.set(key, { key, name, decks: [] });
