@@ -3,6 +3,7 @@ package com.decksuggester.decks;
 import com.decksuggester.InvalidRequestException;
 import com.decksuggester.auth.CurrentUserService;
 import com.decksuggester.auth.UserIdentity;
+import com.decksuggester.folders.FolderService;
 import com.decksuggester.spellbook.RecommendationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.folders;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 

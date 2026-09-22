@@ -2,6 +2,7 @@ package com.decksuggester.decks;
 
 import com.decksuggester.auth.CurrentUserService;
 import com.decksuggester.auth.UserIdentity;
+import com.decksuggester.folders.FolderService;
 import com.decksuggester.spellbook.RecommendationService;
 import org.junit.jupiter.api.Test;
 

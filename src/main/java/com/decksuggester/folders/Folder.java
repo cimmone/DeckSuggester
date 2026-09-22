@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.folders;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.data.annotation.Id;

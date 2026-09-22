@@ -1,7 +1,9 @@
-package com.decksuggester.decks;
+package com.decksuggester.folders;
 
 import com.decksuggester.InvalidRequestException;
 import com.decksuggester.auth.UserIdentity;
+import com.decksuggester.decks.Deck;
+import com.decksuggester.decks.DeckRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -106,7 +108,7 @@ class FolderServiceTests {
 
     @Test
     void movingADeckToTheLibraryRootClearsTheFolderRef() {
-        Deck deck = new Deck(1L, "D", null, "url", 0L, "root", 0L, "folder",
+        Deck deck = new Deck(owner, 1L, "D", null, "url", 0L, "root", 0L, "folder",
                 Instant.now(), List.of());
         deck.setFolderRef("f1");
         when(deckRepository.findByIdAndOwnerIdAndLibraryId(deck.getId(), "alice", "alice-lib"))
@@ -120,7 +122,7 @@ class FolderServiceTests {
 
     @Test
     void movingADeckIntoAnUnknownFolderIsRejected() {
-        Deck deck = new Deck(1L, "D", null, "url", 0L, "root", 0L, "folder",
+        Deck deck = new Deck(owner, 1L, "D", null, "url", 0L, "root", 0L, "folder",
                 Instant.now(), List.of());
         when(deckRepository.findByIdAndOwnerIdAndLibraryId(deck.getId(), "alice", "alice-lib"))
                 .thenReturn(Optional.of(deck));

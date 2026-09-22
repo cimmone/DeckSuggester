@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.folders;
 
 import com.decksuggester.InvalidRequestException;
 import com.decksuggester.auth.CurrentUserService;

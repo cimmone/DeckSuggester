@@ -4,7 +4,7 @@ import com.decksuggester.auth.UserAccountRepository;
 import com.decksuggester.cards.CardRepository;
 import com.decksuggester.decks.DeckHistoryRepository;
 import com.decksuggester.decks.DeckRepository;
-import com.decksuggester.decks.FolderRepository;
+import com.decksuggester.folders.FolderRepository;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 

@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.folders;
 
 public class FolderNotFoundException extends RuntimeException {
 

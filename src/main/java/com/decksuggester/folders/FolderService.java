@@ -1,7 +1,10 @@
-package com.decksuggester.decks;
+package com.decksuggester.folders;
 
 import com.decksuggester.InvalidRequestException;
 import com.decksuggester.auth.UserIdentity;
+import com.decksuggester.decks.Deck;
+import com.decksuggester.decks.DeckNotFoundException;
+import com.decksuggester.decks.DeckRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
