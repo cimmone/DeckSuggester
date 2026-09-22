@@ -4,6 +4,12 @@ import com.decksuggester.InvalidRequestException;
 import com.decksuggester.auth.UserIdentity;
 import com.decksuggester.cards.Card;
 import com.decksuggester.cards.CardRepository;
+import com.decksuggester.decks.external.ArchidektClient;
+import com.decksuggester.decks.external.ArchidektException;
+import com.decksuggester.decks.external.ArchidektGateway;
+import com.decksuggester.decks.external.MoxfieldClient;
+import com.decksuggester.decks.external.MoxfieldException;
+import com.decksuggester.decks.external.MoxfieldGateway;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 

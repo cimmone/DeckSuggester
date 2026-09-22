@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.decks.external;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,7 +131,7 @@ public class ArchidektClient implements ArchidektGateway {
         }
     }
 
-    static String slugify(String name) {
+    public static String slugify(String name) {
         String normalized = Normalizer.normalize(name == null ? "deck" : name,
                         Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")

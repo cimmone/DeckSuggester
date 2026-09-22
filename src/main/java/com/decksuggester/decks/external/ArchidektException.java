@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.decks.external;
 
 public class ArchidektException extends RuntimeException {
 

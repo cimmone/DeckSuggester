@@ -2,6 +2,8 @@ package com.decksuggester.decks;
 
 import com.decksuggester.auth.UserIdentity;
 import com.decksuggester.cards.CardRepository;
+import com.decksuggester.decks.external.ArchidektGateway;
+import com.decksuggester.decks.external.MoxfieldClient;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import tools.jackson.databind.ObjectMapper;
@@ -28,7 +30,6 @@ class MoxfieldFixtureImportTests {
     @Test
     void parsesTheCapturedMoxfieldDeckFixture() {
         MoxfieldClient moxfieldClient = new MoxfieldClient(new ObjectMapper(),
-                java.net.http.HttpClient.newHttpClient(),
                 "https://api2.moxfield.com", FIXTURE_DIRECTORY);
         CardRepository cardRepository = mock(CardRepository.class);
         DeckRepository deckRepository = mock(DeckRepository.class);

@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.decks.external;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

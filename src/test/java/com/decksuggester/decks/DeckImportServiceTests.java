@@ -3,6 +3,8 @@ package com.decksuggester.decks;
 import com.decksuggester.InvalidRequestException;
 import com.decksuggester.auth.UserIdentity;
 import com.decksuggester.cards.CardRepository;
+import com.decksuggester.decks.external.ArchidektGateway;
+import com.decksuggester.decks.external.MoxfieldGateway;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import tools.jackson.databind.ObjectMapper;

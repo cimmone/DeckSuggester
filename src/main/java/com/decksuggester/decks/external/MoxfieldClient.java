@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.decks.external;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +68,7 @@ public class MoxfieldClient implements MoxfieldGateway {
     }
 
     /** Pulls the trailing deck id out of a Moxfield deck URL, rejecting any other host. */
-    static String extractPublicId(String deckUrl) {
+    public static String extractPublicId(String deckUrl) {
         if (deckUrl == null || deckUrl.isBlank()) {
             throw new InvalidRequestException("A Moxfield deck URL is required");
         }

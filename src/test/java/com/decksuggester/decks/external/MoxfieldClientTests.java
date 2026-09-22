@@ -1,4 +1,4 @@
-package com.decksuggester.decks;
+package com.decksuggester.decks.external;
 
 import com.decksuggester.InvalidRequestException;
 import org.junit.jupiter.api.Test;
