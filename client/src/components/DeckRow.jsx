@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { API_BASE } from '../lib/api';
 import { cardColors } from '../lib/cardFormatting';
 import { CardTable } from './CardTable';
 
@@ -79,7 +80,7 @@ export function DeckRow({ deck, folders, onDelete, onUpdate, onMoveToFolder }) {
                 {signatures.map((card) => (
                   <div className="signature-preview-item" key={card.scryfallId || card.name}>
                     {card.scryfallId ? (
-                      <img src={`/cards/${encodeURIComponent(card.scryfallId)}/image`}
+                      <img src={`${API_BASE}/cards/${encodeURIComponent(card.scryfallId)}/image`}
                         alt={card.name} loading="lazy" />
                     ) : (
                       <span className="placeholder">{card.name}</span>

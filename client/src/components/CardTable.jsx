@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { API_BASE } from '../lib/api';
 import { creaturePower, creatureToughness, formatManaValue, releaseDate } from '../lib/cardFormatting';
 import { sortCards } from '../lib/sorting';
 
@@ -48,7 +49,7 @@ function CardName({ card }) {
       {previewStyle && (
         <span className="card-preview" role="tooltip"
           style={{ top: `${previewStyle.top}px`, left: `${previewStyle.left}px` }}>
-          <img src={`/cards/${encodeURIComponent(card.scryfallId)}/image`}
+          <img src={`${API_BASE}/cards/${encodeURIComponent(card.scryfallId)}/image`}
             alt={card.name} loading="lazy" />
         </span>
       )}

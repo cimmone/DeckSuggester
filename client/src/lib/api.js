@@ -1,3 +1,5 @@
+export const API_BASE = '/api/v1';
+
 async function request(url, { method = 'GET', body, headers, errorMessage } = {}) {
   const response = await fetch(url, {
     method,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { API_BASE } from '../lib/api';
 
 export function AddCardBox({ securedFetch, onAddCard }) {
   const [query, setQuery] = useState('');
@@ -16,7 +17,7 @@ export function AddCardBox({ securedFetch, onAddCard }) {
     let cancelled = false;
     const handle = setTimeout(async () => {
       try {
-        const response = await securedFetch(`/decks/card-search?q=${encodeURIComponent(query.trim())}`);
+        const response = await securedFetch(`${API_BASE}/decks/card-search?q=${encodeURIComponent(query.trim())}`);
         if (!response.ok) return;
         const results = await response.json();
         if (!cancelled) {

@@ -4,7 +4,7 @@ import { DeckRow } from '../components/DeckRow';
 import { FolderManager } from '../components/FolderManager';
 import { ManualDeckImportDialog } from '../components/ManualDeckImportDialog';
 import { PieChart } from '../components/PieChart';
-import { createSecuredFetch } from '../lib/api';
+import { API_BASE, createSecuredFetch } from '../lib/api';
 import { METRICS, deckMatchesFilters } from '../lib/filters';
 
 export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
@@ -25,13 +25,13 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
     [onUnauthenticated, session]);
 
   const loadData = useCallback(async () => {
-    const response = await securedFetch('/library');
+    const response = await securedFetch(`${API_BASE}/library`);
     if (!response.ok) throw new Error('Could not load Mongo data');
     const library = await response.json();
     setDecks(library.decks);
     setStats(library.statistics);
     try {
-      const folderResponse = await securedFetch('/folders');
+      const folderResponse = await securedFetch(`${API_BASE}/folders`);
       if (folderResponse.ok) setFolders(await folderResponse.json());
     } catch { /* folders are optional */ }
   }, [securedFetch]);
@@ -81,7 +81,7 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
     setBusy(true);
     setNotice({ type: 'info', text: 'Importing every nested folder and deck…' });
     try {
-      const response = await securedFetch('/decks/', {
+      const response = await securedFetch(`${API_BASE}/decks/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: folderUrl }),
       });
@@ -99,7 +99,7 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
 
   async function deleteDeck(deck) {
     if (!window.confirm(`Delete “${deck.name}” from Mongo?`)) return;
-    const response = await securedFetch(`/decks/${encodeURIComponent(deck.id)}`,
+    const response = await securedFetch(`${API_BASE}/decks/${encodeURIComponent(deck.id)}`,
       { method: 'DELETE' });
     if (response.ok) {
       await loadData();
@@ -107,7 +107,7 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
     }
   }
   async function moveDeckToFolder(deck, targetFolderId) {
-    const response = await securedFetch(`/decks/${encodeURIComponent(deck.id)}/folder`, {
+    const response = await securedFetch(`${API_BASE}/decks/${encodeURIComponent(deck.id)}/folder`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ folderId: targetFolderId || null }),
     });
@@ -121,7 +121,7 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
 
 
   async function updateDeck(deck, name, description) {
-    const response = await securedFetch(`/decks/${encodeURIComponent(deck.id)}`, {
+    const response = await securedFetch(`${API_BASE}/decks/${encodeURIComponent(deck.id)}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, description }),
     });
@@ -132,7 +132,7 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
 
   async function deleteAll() {
     if (!window.confirm('Delete every deck in your library? This cannot be undone.')) return;
-    const response = await securedFetch('/decks', { method: 'DELETE' });
+    const response = await securedFetch(`${API_BASE}/decks`, { method: 'DELETE' });
     if (response.ok) {
       setFilters([]);
       await loadData();

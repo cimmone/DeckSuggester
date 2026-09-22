@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { API_BASE } from '../lib/api';
 import { navigate } from '../lib/router';
 
 /** Popup for pasting a raw decklist plus a signature card name to create a new deck. */
@@ -23,7 +24,7 @@ export function ManualDeckImportDialog({ session, securedFetch, folders, onClose
     if (!signatureName.trim()) { setError('A signature card (commander) name is required.'); return; }
     setBusy(true);
     try {
-      const response = await securedFetch('/decks/manual', {
+      const response = await securedFetch(`${API_BASE}/decks/manual`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),

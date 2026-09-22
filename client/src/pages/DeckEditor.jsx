@@ -6,7 +6,7 @@ import { DeckHistoryPanel } from '../components/DeckHistoryPanel';
 import { RecommendationsDialog } from '../components/RecommendationsDialog';
 import { SignatureCard } from '../components/SignatureCard';
 import { Toasts } from '../components/Toasts';
-import { createSecuredFetch } from '../lib/api';
+import { API_BASE, createSecuredFetch } from '../lib/api';
 import { navigate } from '../lib/router';
 
 export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
@@ -33,7 +33,7 @@ export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
     [onUnauthenticated, session]);
 
   const loadDeck = useCallback(async () => {
-    const response = await securedFetch(`/decks/${encodeURIComponent(deckId)}`);
+    const response = await securedFetch(`${API_BASE}/decks/${encodeURIComponent(deckId)}`);
     if (response.status === 404) throw new Error('That deck could not be found.');
     if (!response.ok) throw new Error('Could not load the deck.');
     setDeck(await response.json());
@@ -48,7 +48,7 @@ export function DeckEditor({ session, deckId, onSignOut, onUnauthenticated }) {
   // success, or throws with the server's message on failure. When the mutation
   // targets the deck currently open, its state is refreshed in place.
   const mutateDeck = useCallback(async (targetDeckId, method, name) => {
-    const response = await securedFetch(`/decks/${encodeURIComponent(targetDeckId)}/cards`, {
+    const response = await securedFetch(`${API_BASE}/decks/${encodeURIComponent(targetDeckId)}/cards`, {
       method, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });

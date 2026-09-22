@@ -55,12 +55,12 @@ public class SecurityConfig {
                         .requireExplicitSave(true))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokens)
-                        .ignoringRequestMatchers("/auth/login", "/auth/register",
-                                "/auth/password-reset/**"))
+                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/auth/register",
+                                "/api/v1/auth/password-reset/**"))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/ui", "/ui/", "/ui/**", "/error",
-                                "/auth/login", "/auth/register", "/auth/logout",
-                                "/auth/session", "/auth/password-reset/**").permitAll()
+                        .requestMatchers("/", "/ui", "/ui/", "/ui/**", "/error",
+                                "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/logout",
+                                "/api/v1/auth/session", "/api/v1/auth/password-reset/**").permitAll()
                         .anyRequest().authenticated())
                 .requestCache(cache -> cache.disable())
                 .formLogin(form -> form.disable())

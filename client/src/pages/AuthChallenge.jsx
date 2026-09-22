@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { jsonRequest } from '../lib/api';
+import { API_BASE, jsonRequest } from '../lib/api';
 
 export function AuthChallenge({ onAuthenticated }) {
   const resetToken = new URLSearchParams(window.location.search).get('resetToken');
@@ -20,20 +20,20 @@ export function AuthChallenge({ onAuthenticated }) {
     setNotice(null);
     try {
       if (mode === 'login') {
-        await jsonRequest('/auth/login', { username: form.username, password: form.password });
+        await jsonRequest(`${API_BASE}/auth/login`, { username: form.username, password: form.password });
         await onAuthenticated();
       } else if (mode === 'register') {
-        await jsonRequest('/auth/register', {
+        await jsonRequest(`${API_BASE}/auth/register`, {
           username: form.username, password: form.password, email: form.email,
         });
         setForm((current) => ({ ...current, password: '' }));
         setMode('login');
         setNotice({ type: 'success', text: 'Account created. Sign in to open your library.' });
       } else if (mode === 'request-reset') {
-        const result = await jsonRequest('/auth/password-reset/request', { account: form.account });
+        const result = await jsonRequest(`${API_BASE}/auth/password-reset/request`, { account: form.account });
         setNotice({ type: 'success', text: result.message });
       } else {
-        const result = await jsonRequest('/auth/password-reset/confirm', {
+        const result = await jsonRequest(`${API_BASE}/auth/password-reset/confirm`, {
           token: form.token, password: form.password,
         });
         window.history.replaceState({}, '', '/ui/');

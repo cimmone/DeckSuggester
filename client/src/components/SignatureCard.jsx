@@ -4,6 +4,7 @@ import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import {
   creaturePower, creatureToughness, formatManaValue, releaseDate,
 } from '../lib/cardFormatting';
+import { API_BASE } from '../lib/api';
 
 /** Renders a deck's signature card: image, key metadata, and a flip control for double-faced cards. */
 export function SignatureCard({ card }) {
@@ -11,13 +12,13 @@ export function SignatureCard({ card }) {
   if (!card) return null;
   const canFlip = card.backImageUrl != null && card.backImageUrl !== '';
   const frontSrc = card.scryfallId
-    ? `/cards/${encodeURIComponent(card.scryfallId)}/image`
+    ? `${API_BASE}/cards/${encodeURIComponent(card.scryfallId)}/image`
     : card.imageUrl;
   // The back face is served via the same image proxy using the front card's
   // scryfall id with a `?face=back` hint that the proxy resolves to the back
   // image. The proxy falls back to the front image when there is no back face.
   const backSrc = card.scryfallId
-    ? `/cards/${encodeURIComponent(card.scryfallId)}/image?face=back`
+    ? `${API_BASE}/cards/${encodeURIComponent(card.scryfallId)}/image?face=back`
     : card.backImageUrl;
 
   return (

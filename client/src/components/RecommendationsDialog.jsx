@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { API_BASE } from '../lib/api';
 
 const FILTERS = [
   { value: 'owned', label: 'Already in deck' },
@@ -17,7 +18,7 @@ export function RecommendationsDialog({ deck, securedFetch, onClose, onAddCard }
     let cancelled = false;
     (async () => {
       try {
-        const url = `/decks/${encodeURIComponent(deck.id)}/recommendations?filter=${filter}`;
+        const url = `${API_BASE}/decks/${encodeURIComponent(deck.id)}/recommendations?filter=${filter}`;
         const response = await securedFetch(url);
         if (!response.ok) throw new Error('Could not load recommendations');
         const items = await response.json();
@@ -85,7 +86,7 @@ export function RecommendationsDialog({ deck, securedFetch, onClose, onAddCard }
                     disabled={adding === (card.scryfallId || card.name)}
                     onClick={() => addCard(card)}>
                     {card.scryfallId ? (
-                      <img src={`/cards/${encodeURIComponent(card.scryfallId)}/image`}
+                      <img src={`${API_BASE}/cards/${encodeURIComponent(card.scryfallId)}/image`}
                         alt={card.name} loading="lazy" />
                     ) : (
                       <span className="placeholder">{card.name}</span>

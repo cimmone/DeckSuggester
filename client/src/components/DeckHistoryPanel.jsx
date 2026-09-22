@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { API_BASE } from '../lib/api';
 
 const ACTION_LABELS = {
   ADD_CARD: 'Added',
@@ -29,7 +30,7 @@ export function DeckHistoryPanel({ securedFetch, onClose, onUndo, refreshKey }) 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, busy: true }));
     try {
-      const response = await securedFetch('/decks/history');
+      const response = await securedFetch(`${API_BASE}/decks/history`);
       if (!response.ok) throw new Error('Could not load the deck history.');
       const entries = await response.json();
       setState({ busy: false, error: null, entries });

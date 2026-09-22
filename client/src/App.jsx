@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AuthChallenge } from './pages/AuthChallenge';
 import { DeckEditor } from './pages/DeckEditor';
 import { LibraryApp } from './pages/LibraryApp';
-import { getJson } from './lib/api';
+import { API_BASE, getJson } from './lib/api';
 import { deckIdFromPath, useLocationPath } from './lib/router';
 import './styles.css';
 
@@ -10,7 +10,7 @@ function App() {
   const [session, setSession] = useState(null);
 
   const refreshSession = useCallback(async () => {
-    const nextSession = await getJson('/auth/session', 'Could not check your session');
+    const nextSession = await getJson(`${API_BASE}/auth/session`, 'Could not check your session');
     setSession(nextSession);
     return nextSession;
   }, []);
@@ -23,7 +23,7 @@ function App() {
     // Fire-and-forget: the client always drops to signed-out state locally,
     // regardless of whether the server call succeeds, so this bypasses the
     // JSON request helpers rather than surfacing an error nothing reads.
-    await fetch('/auth/logout', {
+    await fetch(`${API_BASE}/auth/logout`, {
       method: 'POST', headers: { [session.csrfHeaderName]: session.csrfToken },
     });
     setSession({ authenticated: false });

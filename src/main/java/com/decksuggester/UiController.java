@@ -6,6 +6,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class UiController {
 
+    @GetMapping("/")
+    public String root() {
+        return "redirect:/ui";
+    }
+
     @GetMapping({"/ui", "/ui/"})
     public String ui() {
         return "forward:/ui/index.html";

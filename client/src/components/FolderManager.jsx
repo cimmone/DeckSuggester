@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChevronUp, faChevronDown, faFolder, faFolderOpen, faPlus, faTrash, faArrowRight,
 } from '@fortawesome/free-solid-svg-icons';
+import { API_BASE } from '../lib/api';
 
 /** A tree view of the user's folders with create/rename/reorder/move/delete controls. */
 export function FolderManager({ securedFetch, folders, decks, onChange, onClose }) {
@@ -34,7 +35,7 @@ export function FolderManager({ securedFetch, folders, decks, onChange, onClose 
     if (!name.trim()) return;
     setBusy(true);
     try {
-      const response = await securedFetch('/folders', {
+      const response = await securedFetch(`${API_BASE}/folders`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), parentId: parentId || null }),
       });
@@ -48,7 +49,7 @@ export function FolderManager({ securedFetch, folders, decks, onChange, onClose 
     setBusy(true);
     setError(null);
     try {
-      const response = await securedFetch(`/folders/${encodeURIComponent(folderId)}/move`, {
+      const response = await securedFetch(`${API_BASE}/folders/${encodeURIComponent(folderId)}/move`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parentId: targetFolderId === undefined ? null : targetFolderId, order }),
       });
@@ -61,7 +62,7 @@ export function FolderManager({ securedFetch, folders, decks, onChange, onClose 
     setBusy(true);
     setError(null);
     try {
-      const response = await securedFetch(`/folders/${encodeURIComponent(folderId)}`,
+      const response = await securedFetch(`${API_BASE}/folders/${encodeURIComponent(folderId)}`,
         { method: 'DELETE' });
       if (!response.ok) throw new Error('Could not delete the folder');
       setConfirming(null);
@@ -74,7 +75,7 @@ export function FolderManager({ securedFetch, folders, decks, onChange, onClose 
     setBusy(true);
     setError(null);
     try {
-      const response = await securedFetch(`/folders/${encodeURIComponent(folder.id)}`, {
+      const response = await securedFetch(`${API_BASE}/folders/${encodeURIComponent(folder.id)}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: renameValue.trim() }),
       });
