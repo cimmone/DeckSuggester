@@ -124,6 +124,8 @@ footer { padding: 25px; border-top: 1px solid #d6d7ce; color: #919a94; text-alig
 .auth-form input { width: 100%; border: 1px solid #ccd1ca; border-radius: 9px; padding: 12px 13px; background: #fff; outline: none; }
 .auth-form input:focus { border-color: #39745d; box-shadow: 0 0 0 3px #dbe8e1; }
 .auth-form small { color: #8a958f; font-size: 10px; font-weight: 500; }
+.auth-remember { display: flex !important; flex-direction: row; align-items: center; gap: 8px; }
+.auth-remember input { width: auto; }
 .auth-submit { min-height: 45px; margin-top: 4px; }
 .auth-links { display: flex; justify-content: space-between; gap: 16px; margin-top: 22px; }
 

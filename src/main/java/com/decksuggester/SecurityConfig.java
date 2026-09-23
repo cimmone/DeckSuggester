@@ -13,9 +13,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.RememberMeServices;
+import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+
+import java.time.Duration;
 
 import static org.springframework.security.crypto.password.Pbkdf2PasswordEncoder.SecretKeyFactoryAlgorithm.PBKDF2WithHmacSHA256;
 
@@ -41,9 +45,29 @@ public class SecurityConfig {
         return new HttpSessionSecurityContextRepository();
     }
 
+    /**
+     * Hash-based (stateless) remember-me: the cookie is a signed
+     * username/expiry/password-hash token, so no server-side token store is
+     * needed and changing a password invalidates every outstanding cookie.
+     */
+    @Bean
+    public RememberMeServices rememberMeServices(@Value("${auth.remember-me-key}") String rememberMeKey,
+                                                  UserAccountService userAccountService) {
+        TokenBasedRememberMeServices rememberMeServices =
+                new TokenBasedRememberMeServices(rememberMeKey, userAccountService);
+        rememberMeServices.setTokenValiditySeconds((int) Duration.ofHours(24).toSeconds());
+        // AuthController decides whether to remember (from the request body, a
+        // JSON POST with no query/form "remember-me" parameter for the default
+        // servlet-parameter check to find), so skip that check and always set
+        // the cookie when loginSuccess() is actually invoked.
+        rememberMeServices.setAlwaysRemember(true);
+        return rememberMeServices;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                    SecurityContextRepository contexts)
+                                                    SecurityContextRepository contexts,
+                                                    RememberMeServices rememberMeServices)
             throws Exception {
         CookieCsrfTokenRepository csrfTokens = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfTokens.setCookiePath("/");
@@ -63,6 +87,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/session", "/api/v1/auth/password-reset/**").permitAll()
                         .anyRequest().authenticated())
                 .requestCache(cache -> cache.disable())
+                .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable())

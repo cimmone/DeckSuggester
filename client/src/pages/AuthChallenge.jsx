@@ -5,7 +5,7 @@ export function AuthChallenge({ onAuthenticated }) {
   const resetToken = new URLSearchParams(window.location.search).get('resetToken');
   const [mode, setMode] = useState(resetToken ? 'confirm-reset' : 'login');
   const [form, setForm] = useState({
-    username: '', password: '', email: '', account: '', token: resetToken || '',
+    username: '', password: '', email: '', account: '', token: resetToken || '', rememberMe: true,
   });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -20,7 +20,9 @@ export function AuthChallenge({ onAuthenticated }) {
     setNotice(null);
     try {
       if (mode === 'login') {
-        await jsonRequest(`${API_BASE}/auth/login`, { username: form.username, password: form.password });
+        await jsonRequest(`${API_BASE}/auth/login`, {
+          username: form.username, password: form.password, rememberMe: form.rememberMe,
+        });
         await onAuthenticated();
       } else if (mode === 'register') {
         await jsonRequest(`${API_BASE}/auth/register`, {
@@ -96,6 +98,11 @@ export function AuthChallenge({ onAuthenticated }) {
               maxLength="256" autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               value={form.password} onChange={update('password')} />
             {mode !== 'login' && <small>Use at least 12 characters.</small>}
+          </label>}
+          {mode === 'login' && <label className="auth-remember">
+            <input type="checkbox" checked={form.rememberMe}
+              onChange={(event) => setForm((current) => ({ ...current, rememberMe: event.target.checked }))} />
+            Remember me
           </label>}
           <button className="primary-button auth-submit" disabled={busy}>
             {busy ? 'Working…' : mode === 'login' ? 'Sign in' : mode === 'register'

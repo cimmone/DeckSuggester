@@ -16,6 +16,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.RememberMeServices;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -32,13 +34,16 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContexts;
     private final UserAccountService userAccountService;
+    private final RememberMeServices rememberMeServices;
 
     public AuthController(AuthenticationManager authenticationManager,
                           SecurityContextRepository securityContexts,
-                          UserAccountService userAccountService) {
+                          UserAccountService userAccountService,
+                          RememberMeServices rememberMeServices) {
         this.authenticationManager = authenticationManager;
         this.securityContexts = securityContexts;
         this.userAccountService = userAccountService;
+        this.rememberMeServices = rememberMeServices;
     }
 
     /** Echoes back the CSRF header name so the client never has to hardcode a guess. */
@@ -69,6 +74,9 @@ public class AuthController {
             context.setAuthentication(authentication);
             SecurityContextHolder.setContext(context);
             securityContexts.saveContext(context, request, response);
+            if (login.rememberMeOrDefault()) {
+                rememberMeServices.loginSuccess(request, response, authentication);
+            }
             UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
             return ResponseEntity.ok(new LoginResponse(principal.getUsername(),
                     principal.libraryId()));
@@ -82,6 +90,9 @@ public class AuthController {
     public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response,
                                        Authentication authentication) {
         new SecurityContextLogoutHandler().logout(request, response, authentication);
+        if (rememberMeServices instanceof LogoutHandler logoutHandler) {
+            logoutHandler.logout(request, response, authentication);
+        }
         return ResponseEntity.noContent().build();
     }
 
@@ -108,7 +119,13 @@ public class AuthController {
 
     public record LoginRequest(
             @NotBlank @Size(max = 64) String username,
-            @NotBlank @Size(max = 256) String password) {
+            @NotBlank @Size(max = 256) String password,
+            Boolean rememberMe) {
+
+        /** Remember-me defaults to on when the client omits it. */
+        boolean rememberMeOrDefault() {
+            return rememberMe == null || rememberMe;
+        }
     }
 
     public record RegisterRequest(
