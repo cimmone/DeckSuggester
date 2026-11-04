@@ -225,7 +225,7 @@ public class RecommendationService {
         String explanation = buildExplanation(combo, owned, required, outsideIdentity,
                 totalMana, creatureCount, totalPrice);
         return new Recommendation(combo.getId(), combo.getDescription(), fitness, owned,
-                required, missing, explanation);
+                required, missing, explanation, combo.getResults());
     }
 
     private String pieceExplanation(String typeLine) {
@@ -352,6 +352,7 @@ public class RecommendationService {
 
     public record Recommendation(String comboId, String description, double fitness,
                                  int ownedPieces, int requiredPieces,
-                                 List<RecommendedCard> newCards, String explanation) {
+                                 List<RecommendedCard> newCards, String explanation,
+                                 List<String> results) {
     }
 }

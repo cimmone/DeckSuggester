@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { API_BASE } from '../lib/api';
+import { cardId, groupRecommendations } from '../lib/recommendationGroups';
 
 const FILTERS = [
   { value: 'owned', label: 'Already in deck' },
@@ -13,10 +14,21 @@ export function RecommendationsDialog({ deck, securedFetch, onClose, onAddCard }
   const [filter, setFilter] = useState('legal');
   const [state, setState] = useState({ busy: true, error: null, items: [] });
   const [adding, setAdding] = useState(null);
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set());
+  const groups = useMemo(() => groupRecommendations(state.items, filter), [state.items, filter]);
+
+  function toggleGroup(key) {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
     setState({ busy: true, error: null, items: [] });
+    setExpandedGroups(new Set());
     (async () => {
       try {
         const url = `${API_BASE}/decks/${encodeURIComponent(deck.id)}/recommendations?filter=${filter}`;
@@ -33,7 +45,7 @@ export function RecommendationsDialog({ deck, securedFetch, onClose, onAddCard }
 
   async function addCard(card) {
     if (!onAddCard || !card || !card.name) return;
-    setAdding(card.scryfallId || card.name);
+    setAdding(cardId(card));
     try {
       await onAddCard(card.name);
     } finally {
@@ -77,41 +89,101 @@ export function RecommendationsDialog({ deck, securedFetch, onClose, onAddCard }
         )}
 
         <div className="recommendation-list">
-          {state.items.map((rec) => (
-            <div className="recommendation" key={rec.comboId}>
-              <div className="recommendation-summary">
-                <strong>{rec.ownedPieces}/{rec.requiredPieces} pieces owned</strong>
-                <span>{rec.description}</span>
-              </div>
-              {/* The combo explanation is emitted once per combo, not once per
-                  suggested card, so it is not duplicated across the card list. */}
-              {rec.explanation && <p className="recommendation-explanation">{rec.explanation}</p>}
-              {rec.newCards.map((card) => (
-                <div className="recommendation-card" key={`${rec.comboId}-${card.scryfallId || card.name}`}>
-                  <button type="button" className="recommendation-image"
-                    title={`Add ${card.name} to the deck`}
-                    disabled={adding === (card.scryfallId || card.name)}
-                    onClick={() => addCard(card)}>
-                    {card.scryfallId ? (
-                      <img src={`${API_BASE}/cards/${encodeURIComponent(card.scryfallId)}/image`}
-                        alt={card.name} loading="lazy" />
-                    ) : (
-                      <span className="placeholder">{card.name}</span>
-                    )}
-                    <span className="add-overlay" aria-hidden="true">
-                      <FontAwesomeIcon icon={faPlus} />
-                    </span>
-                  </button>
-                  <div className="recommendation-detail">
-                    <strong>{card.name}</strong>
-                    {card.note && <small>{card.note}</small>}
-                  </div>
+          {groups.map((group) => {
+            const [lead, ...others] = group.members;
+            const expanded = expandedGroups.has(group.key);
+            return (
+              <div className="recommendation-group" key={group.key}>
+                <div className="recommendation">
+                  <RecommendationHeader rec={lead} />
+                  {others.length === 0
+                    ? lead.newCards.map((card) => (
+                      <CardRow key={`${lead.comboId}-${cardId(card)}`} card={card}
+                        adding={adding} onAdd={addCard} />
+                    ))
+                    : <CardStack cards={group.cards} adding={adding} onAdd={addCard} />}
+                  {others.length > 0 && (
+                    <button type="button" className="duplicate-toggle" aria-expanded={expanded}
+                      onClick={() => toggleGroup(group.key)}>
+                      {expanded ? 'Hide' : 'Show'} {others.length} duplicate combo{others.length === 1 ? '' : 's'} detected
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
-          ))}
+                {expanded && others.map((rec) => (
+                  <div className="recommendation duplicate" key={rec.comboId}>
+                    <RecommendationHeader rec={rec} />
+                    {rec.newCards.map((card) => (
+                      <CardRow key={`${rec.comboId}-${cardId(card)}`} card={card}
+                        adding={adding} onAdd={addCard} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function RecommendationHeader({ rec }) {
+  return (
+    <>
+      <div className="recommendation-summary">
+        <strong>{rec.ownedPieces}/{rec.requiredPieces} pieces owned</strong>
+        <span>{rec.description}</span>
+      </div>
+      {/* The combo explanation is emitted once per combo, not once per
+          suggested card, so it is not duplicated across the card list. */}
+      {rec.explanation && <p className="recommendation-explanation">{rec.explanation}</p>}
+    </>
+  );
+}
+
+function CardImage({ card }) {
+  return card.scryfallId ? (
+    <img src={`${API_BASE}/cards/${encodeURIComponent(card.scryfallId)}/image`}
+      alt={card.name} loading="lazy" />
+  ) : (
+    <span className="placeholder">{card.name}</span>
+  );
+}
+
+function CardRow({ card, adding, onAdd }) {
+  return (
+    <div className="recommendation-card">
+      <button type="button" className="recommendation-image"
+        title={`Add ${card.name} to the deck`}
+        disabled={adding === cardId(card)}
+        onClick={() => onAdd(card)}>
+        <CardImage card={card} />
+        <span className="add-overlay" aria-hidden="true">
+          <FontAwesomeIcon icon={faPlus} />
+        </span>
+      </button>
+      <div className="recommendation-detail">
+        <strong>{card.name}</strong>
+        {card.note && <small>{card.note}</small>}
+      </div>
+    </div>
+  );
+}
+
+/** Interchangeable cards overlapped in a horizontally scrolling strip; hovering one slides the cards above it aside. */
+function CardStack({ cards, adding, onAdd }) {
+  if (cards.length === 0) return null;
+  return (
+    <div className="card-stack" aria-label="Any one of these cards completes the combo">
+      {cards.map((card) => (
+        <button type="button" className="card-stack-item" key={cardId(card)}
+          title={`Add ${card.name} to the deck`}
+          disabled={adding === cardId(card)}
+          onClick={() => onAdd(card)}>
+          <CardImage card={card} />
+          <span className="card-stack-name">{card.name}</span>
+        </button>
+      ))}
     </div>
   );
 }
