@@ -5,7 +5,7 @@ const card = (id) => ({ scryfallId: id, name: id });
 const rec = (comboId, results, newCards) => ({ comboId, results, newCards });
 
 describe('groupRecommendations', () => {
-  it('collapses combos with identical features and stacks unique cards', () => {
+  it('collapses combos with identical features under the first (best-fit) combo', () => {
     const items = [
       rec('1', ['Infinite mana', 'Infinite draw'], [card('a')]),
       rec('2', ['Infinite draw', 'Infinite mana'], [card('b')]),
@@ -14,7 +14,6 @@ describe('groupRecommendations', () => {
     const groups = groupRecommendations(items, 'legal');
     expect(groups).toHaveLength(2);
     expect(groups[0].members.map((m) => m.comboId)).toEqual(['1', '2']);
-    expect(groups[0].cards.map((c) => c.scryfallId)).toEqual(['a', 'b']);
   });
 
   it('only collapses single-missing-card combos in partial mode', () => {

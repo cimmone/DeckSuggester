@@ -313,20 +313,11 @@ footer { padding: 25px; border-top: 1px solid #d6d7ce; color: #919a94; text-alig
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 
-/* --- Collapsed duplicate combos / stacked alternatives --------------------- */
+/* --- Collapsed duplicate combos --------------------- */
 .recommendation-group { border-bottom: 1px solid #e3e3da; }
 .recommendation-group .recommendation { border-bottom: 0; }
 .recommendation.duplicate { margin-left: 18px; padding-left: 14px; border-left: 3px solid #e3e3da; }
 .duplicate-toggle { margin-top: 8px; border: 0; background: transparent; padding: 0; color: #174b38; font-size: 12px; font-weight: 650; cursor: pointer; text-decoration: underline; }
-.card-stack { --card-width: 150px; --card-overlap: 110px; display: flex; overflow-x: auto; padding: 8px 4px 34px; max-width: 100%; }
-.card-stack-item { position: relative; flex: 0 0 var(--card-width); width: var(--card-width); margin-left: calc(var(--card-overlap) * -1); padding: 0; border: 0; background: transparent; cursor: pointer; transition: transform .2s ease; }
-.card-stack-item:first-child { margin-left: 0; }
-.card-stack-item img { width: 100%; display: block; border-radius: 9px; box-shadow: -4px 0 10px rgba(15,25,20,.28); }
-.card-stack-item .placeholder { display: grid; place-items: center; height: 210px; border: 1px dashed #c3c4ba; border-radius: 9px; background: #fbfaf5; color: #8b968e; font-size: 12px; padding: 8px; }
-.card-stack-item:hover ~ .card-stack-item, .card-stack-item:focus-visible ~ .card-stack-item { transform: translateX(var(--card-overlap)); }
-.card-stack-item:disabled { opacity: .6; cursor: progress; }
-.card-stack-name { position: absolute; left: 0; right: 0; top: 100%; margin-top: 6px; opacity: 0; color: #17251f; font-size: 12px; font-weight: 650; text-align: center; pointer-events: none; transition: opacity .15s ease; }
-.card-stack-item:hover .card-stack-name, .card-stack-item:focus-visible .card-stack-name { opacity: 1; }
 
 /* --- Import progress ------------------------------------------------------- */
 .import-progress-stack { position: fixed; left: 18px; bottom: 18px; z-index: 190; display: flex; flex-direction: column; gap: 10px; width: min(340px, calc(100vw - 36px)); }

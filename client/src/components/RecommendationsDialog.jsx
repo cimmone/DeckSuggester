@@ -96,12 +96,10 @@ export function RecommendationsDialog({ deck, securedFetch, onClose, onAddCard }
               <div className="recommendation-group" key={group.key}>
                 <div className="recommendation">
                   <RecommendationHeader rec={lead} />
-                  {others.length === 0
-                    ? lead.newCards.map((card) => (
-                      <CardRow key={`${lead.comboId}-${cardId(card)}`} card={card}
-                        adding={adding} onAdd={addCard} />
-                    ))
-                    : <CardStack cards={group.cards} adding={adding} onAdd={addCard} />}
+                  {lead.newCards.map((card) => (
+                    <CardRow key={`${lead.comboId}-${cardId(card)}`} card={card}
+                      adding={adding} onAdd={addCard} />
+                  ))}
                   {others.length > 0 && (
                     <button type="button" className="duplicate-toggle" aria-expanded={expanded}
                       onClick={() => toggleGroup(group.key)}>
@@ -166,24 +164,6 @@ function CardRow({ card, adding, onAdd }) {
         <strong>{card.name}</strong>
         {card.note && <small>{card.note}</small>}
       </div>
-    </div>
-  );
-}
-
-/** Interchangeable cards overlapped in a horizontally scrolling strip; hovering one slides the cards above it aside. */
-function CardStack({ cards, adding, onAdd }) {
-  if (cards.length === 0) return null;
-  return (
-    <div className="card-stack" aria-label="Any one of these cards completes the combo">
-      {cards.map((card) => (
-        <button type="button" className="card-stack-item" key={cardId(card)}
-          title={`Add ${card.name} to the deck`}
-          disabled={adding === cardId(card)}
-          onClick={() => onAdd(card)}>
-          <CardImage card={card} />
-          <span className="card-stack-name">{card.name}</span>
-        </button>
-      ))}
     </div>
   );
 }

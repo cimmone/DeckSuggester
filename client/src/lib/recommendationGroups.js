@@ -1,5 +1,6 @@
 // Collapses recommendations that produce the same features, so the dialog can
-// show one entry with the interchangeable cards stacked instead of near-duplicates.
+// show the best-fit combo (the first, as the server sorts by fitness) with the
+// rest folded underneath it as duplicates.
 
 function resultsKey(rec) {
   const results = [...new Set(rec.results || [])].sort();
@@ -34,15 +35,5 @@ export function groupRecommendations(items, filter) {
     groups.push(group);
     if (key !== null) byKey.set(key, group);
   }
-  return groups.map((group) => ({ ...group, cards: uniqueCards(group.members) }));
-}
-
-function uniqueCards(members) {
-  const seen = new Map();
-  for (const rec of members) {
-    for (const card of rec.newCards) {
-      if (!seen.has(cardId(card))) seen.set(cardId(card), card);
-    }
-  }
-  return [...seen.values()];
+  return groups;
 }
