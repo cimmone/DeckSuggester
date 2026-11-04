@@ -308,3 +308,7 @@ footer { padding: 25px; border-top: 1px solid #d6d7ce; color: #919a94; text-alig
 .confirm-dialog { position: relative; margin-top: 16px; padding: 18px; border: 1px solid #ddc3bc; border-radius: 12px; background: #f7ece9; }
 .confirm-dialog p { margin: 0 0 12px; color: #8f332b; font-size: 14px; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 9px; }
+.loading-state small { max-width: 320px; text-align: center; font-size: 12px; }
+.spinner { width: 28px; height: 28px; border: 3px solid #d9ddd3; border-top-color: #174b38; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }

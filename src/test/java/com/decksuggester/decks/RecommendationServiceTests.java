@@ -101,7 +101,7 @@ class RecommendationServiceTests {
                 scryfall("oracle-2", 1.0, "Artifact", List.of("U")),
                 scryfall("oracle-3", 6.0, "Creature", List.of("U")),
                 scryfall("oracle-4", 5.0, "Creature", List.of("U"))));
-        when(cardRepository.findByOracleIdIn(anyCollection())).thenReturn(cards);
+        when(cardRepository.findScoringFieldsByOracleIdIn(anyCollection())).thenReturn(cards);
 
         List<RecommendationService.Recommendation> recommendations = service.recommend(deck, 50);
 
@@ -150,7 +150,7 @@ class RecommendationServiceTests {
         // candidate set instead of the popularity-agnostic capped one.
         when(comboRepository.findCandidatesForOwnedCards(anyString(), anyString(), anyCollection()))
                 .thenReturn(List.of(comboA, comboOwned));
-        when(cardRepository.findByOracleIdIn(anyCollection())).thenReturn(List.of(
+        when(cardRepository.findScoringFieldsByOracleIdIn(anyCollection())).thenReturn(List.of(
                 scryfall("oracle-1", 2.0, "Instant", List.of("U")),
                 scryfall("oracle-2", 1.0, "Artifact", List.of("U"))));
 
@@ -178,7 +178,7 @@ class RecommendationServiceTests {
                 use("Owned Card", "oracle-1"), use("Cheap Artifact", "oracle-2"));
         when(comboRepository.findCandidatesForOwnedCards(anyString(), anyString(), anyCollection()))
                 .thenReturn(List.of(comboPartial));
-        when(cardRepository.findByOracleIdIn(anyCollection())).thenReturn(List.of(
+        when(cardRepository.findScoringFieldsByOracleIdIn(anyCollection())).thenReturn(List.of(
                 scryfall("oracle-1", 2.0, "Instant", List.of("U")),
                 scryfall("oracle-2", 1.0, "Artifact", List.of("U"))));
 

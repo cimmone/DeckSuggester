@@ -16,6 +16,7 @@ export function RecommendationsDialog({ deck, securedFetch, onClose, onAddCard }
 
   useEffect(() => {
     let cancelled = false;
+    setState({ busy: true, error: null, items: [] });
     (async () => {
       try {
         const url = `${API_BASE}/decks/${encodeURIComponent(deck.id)}/recommendations?filter=${filter}`;
@@ -63,7 +64,13 @@ export function RecommendationsDialog({ deck, securedFetch, onClose, onAddCard }
           ))}
         </fieldset>
 
-        {state.busy && <div className="empty-state">Assembling recommendations&hellip;</div>}
+        {state.busy && (
+          <div className="empty-state loading-state" role="status" aria-live="polite">
+            <span className="spinner" aria-hidden="true" />
+            <strong>Assembling combos&hellip;</strong>
+            <small>Checking Commander Spellbook against your deck. The first load can take a moment; repeat loads are faster.</small>
+          </div>
+        )}
         {state.error && <div className="notice error"><span>{state.error}</span></div>}
         {!state.busy && !state.error && state.items.length === 0 && (
           <div className="empty-state">No combo recommendations were found for this deck.</div>

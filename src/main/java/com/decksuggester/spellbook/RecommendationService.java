@@ -6,14 +6,17 @@ import com.decksuggester.decks.Deck;
 import com.decksuggester.decks.DeckCard;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Ranks Commander Spellbook combos by how well they fit a specific deck and
@@ -44,8 +47,18 @@ public class RecommendationService {
     private static final Map<String, String> COLOR_LETTERS = Map.of(
             "white", "W", "blue", "U", "black", "B", "red", "R", "green", "G");
 
+    /** Cached results are keyed by deck content, so edits miss on their own; the TTL only covers refreshed combo/card data. */
+    private static final Duration CACHE_TTL = Duration.ofHours(1);
+    private static final int CACHE_MAX_ENTRIES = 200;
+
     private final ComboRepository comboRepository;
     private final CardRepository cardRepository;
+    private final Map<CacheKey, CachedResult> cache = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<CacheKey, CachedResult> eldest) {
+            return size() > CACHE_MAX_ENTRIES;
+        }
+    };
 
     public RecommendationService(ComboRepository comboRepository, CardRepository cardRepository) {
         this.comboRepository = comboRepository;
@@ -85,6 +98,17 @@ public class RecommendationService {
         String requestedFormat = normalizeFormat(format);
         FilterMode mode = filter == null ? FilterMode.LEGAL : filter;
 
+        // Everything the result depends on (ownership, identity, filter, format)
+        // is in the key, so a modified deck can never be served a stale entry.
+        CacheKey key = new CacheKey(new TreeSet<>(ownedOracleIds), new TreeSet<>(ownedNames),
+                identityRegex, requestedFormat, mode, limit);
+        synchronized (cache) {
+            CachedResult hit = cache.get(key);
+            if (hit != null && hit.expiresAt().isAfter(java.time.Instant.now())) {
+                return hit.recommendations();
+            }
+        }
+
         // Mongo-side: filter by colour identity + combo-level format legality.
         // For OWNED/PARTIAL, further restrict to combos touching a card the
         // deck owns and return every match uncapped, since that set is
@@ -117,7 +141,11 @@ public class RecommendationService {
         // it needs per-card Scryfall data and this deck's ownership) is the
         // sort key for what the caller sees.
         scored.sort(Comparator.comparingDouble(Recommendation::fitness));
-        return scored.subList(0, Math.min(limit, scored.size()));
+        List<Recommendation> result = List.copyOf(scored.subList(0, Math.min(limit, scored.size())));
+        synchronized (cache) {
+            cache.put(key, new CachedResult(result, java.time.Instant.now().plus(CACHE_TTL)));
+        }
+        return result;
     }
 
     private Map<String, Card> loadScryfallCards(List<Combo> combos) {
@@ -131,7 +159,7 @@ public class RecommendationService {
         }
         Map<String, Card> byOracleId = new HashMap<>();
         if (!oracleIds.isEmpty()) {
-            cardRepository.findByOracleIdIn(oracleIds)
+            cardRepository.findScoringFieldsByOracleIdIn(oracleIds)
                     .forEach(card -> byOracleId.putIfAbsent(card.getOracleId(), card));
         }
         return byOracleId;
@@ -309,6 +337,13 @@ public class RecommendationService {
                 default -> LEGAL;
             };
         }
+    }
+
+    private record CacheKey(Set<String> ownedOracleIds, Set<String> ownedNames,
+                            String identityRegex, String format, FilterMode mode, int limit) {
+    }
+
+    private record CachedResult(List<Recommendation> recommendations, java.time.Instant expiresAt) {
     }
 
     public record RecommendedCard(String scryfallId, String name, String imageUrl,
