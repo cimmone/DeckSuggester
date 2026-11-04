@@ -159,7 +159,7 @@ public class RecommendationService {
         }
         Map<String, Card> byOracleId = new HashMap<>();
         if (!oracleIds.isEmpty()) {
-            cardRepository.findScoringFieldsByOracleIdIn(oracleIds)
+            cardRepository.findOnePerOracleId(oracleIds)
                     .forEach(card -> byOracleId.putIfAbsent(card.getOracleId(), card));
         }
         return byOracleId;

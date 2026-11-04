@@ -8,16 +8,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface CardRepository extends MongoRepository<Card, String> {
+public interface CardRepository extends MongoRepository<Card, String>, CardRepositoryCustom {
 
     List<Card> findByScryfallIdIn(Collection<String> ids);
-
-    List<Card> findByOracleIdIn(Collection<String> ids);
-
-    /** Like {@link #findByOracleIdIn} but only the fields combo scoring reads, skipping the large face/rules payloads. */
-    @Query(value = "{ 'oracle_id': { $in: ?0 } }",
-            fields = "{ 'oracle_id': 1, 'cmc': 1, 'color_identity': 1, 'type_line': 1, 'legalities': 1, 'image_uris': 1, 'card_faces.image_uris': 1 }")
-    List<Card> findScoringFieldsByOracleIdIn(Collection<String> ids);
 
     Optional<Card> findFirstByScryfallId(String id);
 

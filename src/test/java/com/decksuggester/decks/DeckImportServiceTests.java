@@ -60,7 +60,7 @@ class DeckImportServiceTests {
                     """.formatted(id, name));
         });
         when(cardRepository.findByScryfallIdIn(any())).thenReturn(List.of());
-        when(cardRepository.findByOracleIdIn(any())).thenReturn(List.of());
+        when(cardRepository.findOnePerOracleId(any())).thenReturn(List.of());
 
         UserIdentity owner = new UserIdentity("alice-id", "alice", "alice-library");
         DeckImportService.ImportResult result = service.importArchidektFolder(
@@ -107,7 +107,7 @@ class DeckImportServiceTests {
                    "maybeboard":{"count":0,"cards":{}}}}
                 """));
         when(cardRepository.findByScryfallIdIn(any())).thenReturn(List.of());
-        when(cardRepository.findByOracleIdIn(any())).thenReturn(List.of());
+        when(cardRepository.findOnePerOracleId(any())).thenReturn(List.of());
         when(deckRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(i -> i.getArgument(0));
 
         UserIdentity owner = new UserIdentity("alice-id", "alice", "alice-library");

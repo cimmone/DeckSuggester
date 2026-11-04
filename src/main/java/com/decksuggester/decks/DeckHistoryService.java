@@ -35,6 +35,17 @@ public class DeckHistoryService {
         return saved;
     }
 
+    /** Records an IMPORT entry for each deck with one insert and one prune, rather than a round trip per deck. */
+    public void recordImports(UserIdentity owner, List<Deck> decks) {
+        Instant now = Instant.now();
+        repository.saveAll(decks.stream()
+                .map(deck -> new DeckHistory(owner.ownerId(), owner.libraryId(), deck.getId(),
+                        deck.getName(), DeckHistory.Action.IMPORT, null, null,
+                        deck.getCards().size(), now))
+                .toList());
+        prune();
+    }
+
     /** Trims the oldest entries so the collection never exceeds the configured cap. */
     void prune() {
         long total = repository.count();

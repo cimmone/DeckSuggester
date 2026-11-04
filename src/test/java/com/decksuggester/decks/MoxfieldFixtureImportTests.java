@@ -38,7 +38,7 @@ class MoxfieldFixtureImportTests {
                 mock(ArchidektGateway.class), moxfieldClient, cardRepository,
                 deckRepository, historyService);
         when(cardRepository.findByScryfallIdIn(any())).thenReturn(List.of());
-        when(cardRepository.findByOracleIdIn(any())).thenReturn(List.of());
+        when(cardRepository.findOnePerOracleId(any())).thenReturn(List.of());
         when(deckRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         UserIdentity owner = new UserIdentity("alice", "alice", "alice-library");

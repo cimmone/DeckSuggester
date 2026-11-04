@@ -153,8 +153,7 @@ public class DeckImportService {
                         importedAt, lookups))
                 .toList();
         deckRepository.saveAll(decks);
-        decks.forEach(deck -> historyService.record(owner, deck,
-                DeckHistory.Action.IMPORT, null, null, deck.getCards().size()));
+        historyService.recordImports(owner, decks);
 
         int totalCards = decks.stream().flatMap(deck -> deck.getCards().stream())
                 .mapToInt(DeckCard::quantity).sum();
@@ -373,13 +372,9 @@ public class DeckImportService {
 
     private CardLookups loadScryfallCards(List<ParsedDeck> decks) {
         Set<String> scryfallIds = new HashSet<>();
-        Set<String> oracleIds = new HashSet<>();
         decks.stream().flatMap(deck -> deck.allCards().stream()).forEach(card -> {
             if (card.scryfallId() != null) {
                 scryfallIds.add(card.scryfallId());
-            }
-            if (card.oracleId() != null) {
-                oracleIds.add(card.oracleId());
             }
         });
         Map<String, Card> byScryfallId = new HashMap<>();
@@ -388,8 +383,15 @@ public class DeckImportService {
             cardRepository.findByScryfallIdIn(scryfallIds)
                     .forEach(card -> byScryfallId.put(card.getScryfallId(), card));
         }
-        if (!oracleIds.isEmpty()) {
-            cardRepository.findByOracleIdIn(oracleIds)
+        // The oracle id is only a fallback for cards whose exact printing wasn't
+        // found, so skip it for everything already matched by Scryfall id.
+        Set<String> unmatchedOracleIds = new HashSet<>();
+        decks.stream().flatMap(deck -> deck.allCards().stream())
+                .filter(card -> card.oracleId() != null
+                        && !byScryfallId.containsKey(card.scryfallId()))
+                .forEach(card -> unmatchedOracleIds.add(card.oracleId()));
+        if (!unmatchedOracleIds.isEmpty()) {
+            cardRepository.findOnePerOracleId(unmatchedOracleIds)
                     .forEach(card -> byOracleId.putIfAbsent(card.getOracleId(), card));
         }
         return new CardLookups(byScryfallId, byOracleId);
