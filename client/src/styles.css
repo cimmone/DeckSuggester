@@ -327,3 +327,20 @@ footer { padding: 25px; border-top: 1px solid #d6d7ce; color: #919a94; text-alig
 .card-stack-item:disabled { opacity: .6; cursor: progress; }
 .card-stack-name { position: absolute; left: 0; right: 0; top: 100%; margin-top: 6px; opacity: 0; color: #17251f; font-size: 12px; font-weight: 650; text-align: center; pointer-events: none; transition: opacity .15s ease; }
 .card-stack-item:hover .card-stack-name, .card-stack-item:focus-visible .card-stack-name { opacity: 1; }
+
+/* --- Import progress ------------------------------------------------------- */
+.import-progress-stack { position: fixed; left: 18px; bottom: 18px; z-index: 190; display: flex; flex-direction: column; gap: 10px; width: min(340px, calc(100vw - 36px)); }
+.import-progress { padding: 12px 14px; border-radius: 11px; background: #fbfaf5; border: 1px solid #d8d8cd; box-shadow: 0 14px 34px rgba(15,25,20,.22); font-size: 12px; }
+.import-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.import-progress-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #17251f; font-size: 13px; }
+.import-progress-heading button { border: 0; background: transparent; font-size: 18px; line-height: 1; color: #6a756d; cursor: pointer; }
+.progress-track { position: relative; height: 8px; border-radius: 4px; background: #e3e5db; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; background: #174b38; transition: width .35s ease; }
+.progress-track.indeterminate .progress-fill { position: absolute; width: 35%; animation: progress-slide 1.1s ease-in-out infinite; }
+.import-progress.complete .progress-fill { background: #2f8a5f; }
+.import-progress.failed { border-color: #d9a79f; }
+.import-progress.failed .progress-fill { width: 100%; background: #9d463a; }
+.import-progress-text { display: block; margin-top: 7px; color: #55605a; }
+.import-progress.failed .import-progress-text { color: #8f332b; }
+@keyframes progress-slide { from { left: -35%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { .progress-track.indeterminate .progress-fill { animation-duration: 3s; } }

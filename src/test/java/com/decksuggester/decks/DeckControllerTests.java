@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -25,7 +26,8 @@ class DeckControllerTests {
     private final CurrentUserService currentUser = mock(CurrentUserService.class);
     private final DeckController controller =
             new DeckController(deckRepository, importService, editService, historyService,
-                    recommendationService, folderService, currentUser);
+                    recommendationService, folderService, currentUser,
+                    new ImportProgressTracker());
     private final UserIdentity alice = new UserIdentity("alice-id", "alice", "alice-library");
 
     @Test
@@ -41,13 +43,14 @@ class DeckControllerTests {
 
         controller.decks();
         controller.importDeck(new DeckController.ImportRequest(
-                "https://archidekt.com/folders/95630"));
+                "https://archidekt.com/folders/95630", null));
         controller.update("deck-1", new DeckController.DeckUpdateRequest("Renamed", null));
         controller.delete("deck-2");
         controller.deleteAll();
 
         verify(deckRepository).findAllByOwnerIdAndLibraryIdOrderByNameAsc("alice-id", "alice-library");
-        verify(importService).importByUrl(eq("https://archidekt.com/folders/95630"), eq(alice));
+        verify(importService).importByUrl(eq("https://archidekt.com/folders/95630"), eq(alice),
+                any(ImportProgress.class));
         verify(deckRepository).deleteByIdAndOwnerIdAndLibraryId("deck-2", "alice-id", "alice-library");
         verify(deckRepository).deleteAllByOwnerIdAndLibraryId("alice-id", "alice-library");
     }

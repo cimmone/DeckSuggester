@@ -29,11 +29,13 @@ public class DeckController {
     private final RecommendationService recommendationService;
     private final FolderService folderService;
     private final CurrentUserService currentUser;
+    private final ImportProgressTracker importTracker;
 
     public DeckController(DeckRepository deckRepository, DeckImportService importService,
                           DeckEditService editService, DeckHistoryService historyService,
                           RecommendationService recommendationService,
-                          FolderService folderService, CurrentUserService currentUser) {
+                          FolderService folderService, CurrentUserService currentUser,
+                          ImportProgressTracker importTracker) {
         this.deckRepository = deckRepository;
         this.importService = importService;
         this.editService = editService;
@@ -41,6 +43,7 @@ public class DeckController {
         this.recommendationService = recommendationService;
         this.folderService = folderService;
         this.currentUser = currentUser;
+        this.importTracker = importTracker;
     }
 
     @GetMapping({ "", "/" })
@@ -57,7 +60,19 @@ public class DeckController {
         if (request == null || request.url() == null || request.url().isBlank()) {
             throw new InvalidRequestException("A JSON body containing a url is required");
         }
-        return importService.importByUrl(request.url(), currentUser.require());
+        UserIdentity owner = currentUser.require();
+        // A client-supplied importId lets the UI poll /imports/{importId} while this request runs.
+        ImportProgress progress = request.importId() == null || request.importId().isBlank()
+                ? new ImportProgress() : importTracker.start(owner, request.importId());
+        return importService.importByUrl(request.url(), owner, progress);
+    }
+
+    /** Live progress of an import started with the given importId. */
+    @GetMapping("/imports/{importId}")
+    public ImportProgress.Snapshot importProgress(@PathVariable String importId) {
+        return importTracker.find(currentUser.require(), importId)
+                .map(ImportProgress::snapshot)
+                .orElseThrow(() -> new DeckNotFoundException(importId));
     }
 
     /** Creates a deck from a pasted card list plus a required signature card. */
@@ -165,7 +180,7 @@ public class DeckController {
     public record CardMutationRequest(String name) {
     }
 
-    public record ImportRequest(String url) {
+    public record ImportRequest(String url, String importId) {
     }
 
     public record MoveDeckFolderRequest(String folderId) {

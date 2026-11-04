@@ -3,9 +3,11 @@ import { AppFooter } from '../components/AppFooter';
 import { DeckRow } from '../components/DeckRow';
 import { FolderManager } from '../components/FolderManager';
 import { ManualDeckImportDialog } from '../components/ManualDeckImportDialog';
+import { ImportProgressPanel } from '../components/ImportProgressPanel';
 import { PieChart } from '../components/PieChart';
 import { API_BASE, createSecuredFetch } from '../lib/api';
 import { METRICS, deckMatchesFilters } from '../lib/filters';
+import { useImports } from '../lib/useImports';
 
 export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
   const [decks, setDecks] = useState([]);
@@ -40,6 +42,11 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
     loadData().catch((error) => setNotice({ type: 'error', text: error.message }))
       .finally(() => setBusy(false));
   }, [loadData]);
+
+  const { imports, startImport, dismiss: dismissImport } = useImports(securedFetch, {
+    onImported: loadData,
+    onError: (error) => setNotice({ type: 'error', text: error.message }),
+  });
 
   const toggleFilter = useCallback((selectedMetric, value) => {
     setFilters((current) => {
@@ -76,25 +83,13 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
     return [...groups.values()];
   }, [filteredDecks, folders]);
 
-  async function importFolder(event) {
+  function importFolder(event) {
     event.preventDefault();
-    setBusy(true);
-    setNotice({ type: 'info', text: 'Importing every nested folder and deck…' });
-    try {
-      const response = await securedFetch(`${API_BASE}/decks/`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: folderUrl }),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.message || 'Import failed');
-      await loadData();
-      setFolderUrl('');
-      setNotice({ type: 'success', text: `Imported ${body.decksImported} decks from ${body.foldersVisited} folders.` });
-    } catch (error) {
-      setNotice({ type: 'error', text: error.message });
-    } finally {
-      setBusy(false);
-    }
+    const url = folderUrl;
+    setFolderUrl('');
+    setNotice(null);
+    // Not awaited: imports run concurrently, each reporting its own progress.
+    startImport(url);
   }
 
   async function deleteDeck(deck) {
@@ -271,6 +266,7 @@ export function LibraryApp({ session, onSignOut, onUnauthenticated }) {
         <FolderManager securedFetch={securedFetch} folders={folders} decks={decks}
           onChange={loadData} onClose={() => setShowFolderManager(false)} />
       )}
+      <ImportProgressPanel imports={imports} onDismiss={dismissImport} />
       <AppFooter />
     </div>
   );

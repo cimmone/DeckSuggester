@@ -53,8 +53,23 @@ public class DeckImportService {
         this.historyService = historyService;
     }
 
-    /** Dispatches a pasted URL to the right importer based on its host. */
     public ImportResult importByUrl(String url, UserIdentity owner) {
+        return importByUrl(url, owner, new ImportProgress());
+    }
+
+    /** Dispatches a pasted URL to the right importer based on its host, reporting progress as it goes. */
+    public ImportResult importByUrl(String url, UserIdentity owner, ImportProgress progress) {
+        try {
+            ImportResult result = dispatchImport(url, owner, progress);
+            progress.complete();
+            return result;
+        } catch (RuntimeException exception) {
+            progress.fail(exception.getMessage());
+            throw exception;
+        }
+    }
+
+    private ImportResult dispatchImport(String url, UserIdentity owner, ImportProgress progress) {
         if (url == null || url.trim().isBlank()) {
             throw new InvalidRequestException("A URL is required");
         }
@@ -63,19 +78,25 @@ public class DeckImportService {
             throw new InvalidRequestException("A valid URL is required");
         }
         if (host.equals("moxfield.com") || host.endsWith(".moxfield.com")) {
-            return importMoxfieldDeck(url.trim(), owner);
+            return importMoxfieldDeck(url.trim(), owner, progress);
         }
         // Default to the Archidekt folder importer for any other URL.
-        return importArchidektFolder(url.trim(), owner);
+        return importArchidektFolder(url.trim(), owner, progress);
     }
 
     public ImportResult importArchidektFolder(String folderUrl, UserIdentity owner) {
+        return importArchidektFolder(folderUrl, owner, new ImportProgress());
+    }
+
+    public ImportResult importArchidektFolder(String folderUrl, UserIdentity owner,
+                                              ImportProgress progress) {
         long rootFolderId = extractFolderId(folderUrl);
         Queue<FolderReference> pendingFolders = new ArrayDeque<>();
         Set<Long> visitedFolders = new LinkedHashSet<>();
         Map<Long, String> folderNames = new LinkedHashMap<>();
         Map<Long, DeckReference> deckReferences = new LinkedHashMap<>();
         pendingFolders.add(new FolderReference(rootFolderId, null));
+        progress.phase("discovering");
 
         while (!pendingFolders.isEmpty()) {
             FolderReference reference = pendingFolders.remove();
@@ -90,6 +111,9 @@ public class DeckImportService {
             String folderName = text(folder, "name", reference.name() == null
                     ? "Folder " + reference.id() : reference.name());
             folderNames.put(reference.id(), folderName);
+            if (reference.id() == rootFolderId) {
+                progress.label(folderName);
+            }
 
             for (JsonNode subfolder : folder.path("subfolders")) {
                 long id = subfolder.path("id").asLong(0);
@@ -108,6 +132,8 @@ public class DeckImportService {
         }
 
         List<ParsedDeck> parsedDecks = new ArrayList<>();
+        progress.total(deckReferences.size());
+        progress.phase("fetching");
         for (DeckReference reference : deckReferences.values()) {
             JsonNode deck = locateDeck(archidekt.fetchDeck(reference.id(), reference.name()));
             if (deck.isMissingNode() || deck.isNull()) {
@@ -115,8 +141,10 @@ public class DeckImportService {
                         + " was missing from the Archidekt response");
             }
             parsedDecks.add(parseArchidektDeck(deck, reference));
+            progress.advance();
         }
 
+        progress.phase("saving");
         CardLookups lookups = loadScryfallCards(parsedDecks);
         Instant importedAt = Instant.now();
         String rootFolderName = folderNames.getOrDefault(rootFolderId, "Folder " + rootFolderId);
@@ -137,12 +165,22 @@ public class DeckImportService {
     }
 
     public ImportResult importMoxfieldDeck(String deckUrl, UserIdentity owner) {
+        return importMoxfieldDeck(deckUrl, owner, new ImportProgress());
+    }
+
+    public ImportResult importMoxfieldDeck(String deckUrl, UserIdentity owner,
+                                           ImportProgress progress) {
+        progress.total(1);
+        progress.phase("fetching");
         String publicId = MoxfieldClient.extractPublicId(deckUrl);
         JsonNode deck = moxfield.fetchDeck(publicId);
         if (deck.isMissingNode() || deck.isNull()) {
             throw new MoxfieldException("Moxfield returned an empty deck for " + publicId);
         }
         ParsedDeck parsed = parseMoxfieldDeck(deck, publicId);
+        progress.label(parsed.name());
+        progress.advance();
+        progress.phase("saving");
         CardLookups lookups = loadScryfallCards(List.of(parsed));
         Instant importedAt = Instant.now();
         Deck deckEntity = toMoxfieldDeck(owner, parsed, importedAt, lookups);
